@@ -25,5 +25,9 @@ function build_bun() {
 }
 
 function build_tauri() {
-    return build("tauri", "tauri build --no-bundle")
+    console.log("\n\x1b[33m🔄 [tauri] 构建中...\x1b[0m\n");
+    return build("tauri", "tauri build --no-bundle").then((res) => {
+        if(res === 0) console.log("\n\x1b[32m✅ [tauri] 构建完成\x1b[0m\n");
+        return res;
+    })
 }
