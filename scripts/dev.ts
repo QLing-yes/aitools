@@ -2,7 +2,6 @@ import { run } from "./spawn.ts";
 
 const dev = (tag: string, command: string, cwd = "") => {
     return run(`dev_${tag} |`, "bun run " + command, cwd, {
-        ...process.env,
         NODE_ENV: "development",
     })
 }

@@ -1,5 +1,5 @@
-import { mergeDeep } from "../utils";
-import { write } from "../utils/file";
+import { mergeDeep } from "../src-bun/app/utils";
+import { write } from "../src-bun/app/utils/file";
 import path from "node:path";
 
 const isProd = process.env.NODE_ENV === "production";
