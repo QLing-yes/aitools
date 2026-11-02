@@ -3,6 +3,7 @@ import * as $c from "@/app/common";
 import { logger } from "@/app/lib/logger";
 import plug_macro from "@/app/plugins/macro.plug";
 import plug_schemas from "@/app/plugins/schemas.plug";
+import { config as tauri_config } from "@/app/common/tauri_sidecar";
 
 /** 控制器插件 */
 export default new Elysia({ name: String($g.counter.n) })
@@ -23,6 +24,16 @@ export default new Elysia({ name: String($g.counter.n) })
         ),
     );
     logger.info(`[request] ${p.request.method} ${p.route || p.path}`, mate);
+  })
+  /** sidecar 模式校验访问令牌，拦截本机其他进程；开发模式（无令牌）全放行 */
+  .onBeforeHandle(({ request, set, path }) => {
+    console.log('token',tauri_config.token);
+
+    if (!tauri_config.token) return;
+    if (request.headers.get("x-tauri-token") === tauri_config.token) return;
+    logger.warn(`[auth] rejected ${request.method} ${path}`);
+    set.status = 401;
+    return $c.error("Unauthorized");
   })
   // .afterResponse(({ set, request, ...p }) => {
   // 	logger.info(`[response] ${request.method} ${p.route || p.path} ${set.status}`);

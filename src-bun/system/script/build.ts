@@ -22,10 +22,9 @@ export const outdir = root;
 export async function build(
   target: Bun.Build.CompileTarget,
   outDir?: string,
-  fileName?: string,
-  autoExit = true
+  fileName?: string
 ) {
-  console.log("\n\x1b[33m🔄 构建中...\x1b[0m\n");
+  console.log("\n\x1b[33m🔄 Bun构建中...\x1b[0m\n");
   // 输出关键路径，便于排查入口解析问题
   const outfile = join(outDir || outdir, fileName || target);
   // 判断是否为 Windows 平台，用于条件应用 Windows 专属配置
@@ -102,6 +101,6 @@ export async function build(
       "process.env.NODE_ENV": "production",
     },
   });
-  console.log(`\x1b[32m✅ 构建完成 : ${outfile}\x1b[0m\n`);
-  if(autoExit) process.exit(0);
+  console.log(`\x1b[32m✅ Bun构建完成 : ${outfile}\x1b[0m\n`);
+  process.exit(0);
 }

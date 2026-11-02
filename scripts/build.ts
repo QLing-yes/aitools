@@ -1,6 +1,8 @@
 import { cp, rm, stat } from "node:fs/promises";
 import { basename, join } from "node:path";
-import { root, run } from "./spawn.ts";
+import { pipe_out } from "./spawn.ts";
+
+const root = process.cwd();
 
 // --------------------------------- 流程 ---------------------------------
 
@@ -9,8 +11,11 @@ await Promise.all([
     build_web(),
     build_bun()
 ])
+console.log("\n\x1b[33m🔄 Tauri 构建中...\x1b[0m\n");
 await build_tauri()
+console.log("\n\x1b[32m✅ Tauri 构建完成\x1b[0m\n");
 await dist();
+console.log("\n\x1b[32m✅ 全部构建完成\x1b[0m\n");
 process.exit(0);
 
 // --------------------------------- 构建 ---------------------------------
@@ -24,20 +29,44 @@ function build_web() {
 function build_bun() {
     return build("bun", "system/script/build_tauri_bun.ts", "src-bun")
 }
-function build_tauri() {
-    return build("tauri", "tauri build --no-bundle").then((res) => {
-        if (res === 0) console.log("\n\x1b[32m✅ tauri构建完成\x1b[0m\n");
-        return res;
-    })
+async function build_tauri() {
+    // return build("tauri", "tauri build --no-bundle", "")
+    const proc = Bun.spawn({
+        cmd: ("bun run tauri build --no-bundle").split(" "),
+        cwd: join(root, ""),
+        stdin: "inherit",
+        stdout: "inherit",
+        stderr: "inherit",
+        env: { ...process.env, NODE_ENV: "production" },
+    });
+    const code = await proc.exited;
+    if (code !== 0) {
+        console.error(`\n\x1b[31m❌ [tauri] 构建失败，退出码 ${code}\x1b[0m\n`);
+        process.exit(code);
+    }
+    return code;
 }
 
 // --------------------------------- 工具 ---------------------------------
 
+/** 启动子进程执行 build 命令，实时转发输出并等待退出，失败则终止整个流程
+ * @param tag 来源标记（输出着色前缀）
+ * @param command bun run 执行的命令文本
+ * @param cwd 子进程工作目录，默认项目根目录
+ * @returns 进程退出代码
+ */
 async function build(tag: string, command: string, cwd = "") {
-    const code = await run(`build_${tag} |`, "bun run " + command, cwd, {
-        ...process.env,
-        NODE_ENV: "production",
+    const proc = Bun.spawn({
+        cmd: ("bun run " + command).split(" "),
+        cwd: join(root, cwd),
+        stdin: "inherit",
+        stdout: "pipe",
+        stderr: "pipe",
+        env: { ...process.env, NODE_ENV: "production" },
     });
+    pipe_out(proc.stdout, `build_${tag} |`);
+    pipe_out(proc.stderr, `build_${tag} |`);
+    const code = await proc.exited;
     if (code !== 0) {
         console.error(`\n\x1b[31m❌ [${tag}] 构建失败，退出码 ${code}\x1b[0m\n`);
         process.exit(code);

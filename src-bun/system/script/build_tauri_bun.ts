@@ -24,5 +24,5 @@ await (async function build_bun() {
 
     const fileName = `bun-service-${rustTarget}`;
 
-    await build(bunTarget, undefined, fileName, false);
+    await build(bunTarget, undefined, fileName);
 })();

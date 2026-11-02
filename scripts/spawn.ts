@@ -1,30 +1,3 @@
-import { join } from "node:path";
-
-export const root = process.cwd();
-
-/** 启动子进程并实时拦截、处理后转发输出
- * @param cmd 子进程命令
- * @param cwd 子进程工作目录，默认程序启动根目录
- * @returns 进程的退出代码 Promise
- */
-export function run(tag: string, command: string, cwd = "", env?: Record<string, string>) {
-    const cmd = command.split(" ");
-    const proc = Bun.spawn({
-        cmd,
-        cwd: join(root, cwd),
-        stdin: "inherit",
-        stdout: "pipe",
-        stderr: "pipe",
-        env: {
-            ...process.env,
-            ...env,
-        }
-    });
-    pipe_out(proc.stdout, tag);
-    pipe_out(proc.stderr, tag);
-    return proc.exited;
-}
-
 /** 逐块读取输出流，按行处理后写回终端
  * @param stream 子进程输出流
  * @param tag 来源标记

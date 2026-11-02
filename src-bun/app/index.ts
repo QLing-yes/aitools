@@ -1,6 +1,7 @@
 import "@/app/common/init-global";
 import { Elysia } from "elysia";
 import plugins from "@/app/plugins/index.plug";
+import { watchParentExit } from "@/app/common/tauri_sidecar";
 
 export const app = new Elysia({
     // 在服务器启动前预编译所有路由，大幅降低首次请求的延迟
@@ -18,5 +19,11 @@ export const app = new Elysia({
         idleTimeout: 15,
     }
 }).use(plugins).listen(process.env.PORT!);
+
+// 仅 sidecar 模式下生效：监听直接父进程退出并联动关闭（直系子进程看住 Tauri，cluster worker 看住主进程）
+watchParentExit(async () => {
+    await app.stop();
+    process.exit(0);
+});
 
 export type APP = typeof app;

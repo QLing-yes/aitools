@@ -31,8 +31,6 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ],
-    "externalBin": [
-      "../src-bun/bun-service"
-    ]
+    "externalBin": []
   }
 }

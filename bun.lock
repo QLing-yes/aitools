@@ -5,6 +5,7 @@
     "": {
       "name": "aitools",
       "dependencies": {
+        "@tauri-apps/api": "^2.12.4",
         "@tauri-apps/plugin-shell": "~2",
       },
       "devDependencies": {
