@@ -14,7 +14,16 @@
       {
         "title": "aitools",
         "width": 1400,
-        "height": 850
+        "height": 850,
+        "minWidth": 800,
+        "minHeight": 500,
+        "center": true,
+        "decorations": false,
+        "transparent": true,
+        "shadow": true,
+        "visible": false,
+        "dragDropEnabled": false,
+        "zoomHotkeysEnabled": false
       }
     ],
     "security": {
