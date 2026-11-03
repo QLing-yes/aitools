@@ -27,8 +27,6 @@ export default new Elysia({ name: String($g.counter.n) })
   })
   /** sidecar 模式校验访问令牌，拦截本机其他进程；开发模式（无令牌）全放行 */
   .onBeforeHandle(({ request, set, path }) => {
-    console.log('token',tauri_config.token);
-
     if (!tauri_config.token) return;
     if (request.headers.get("x-tauri-token") === tauri_config.token) return;
     logger.warn(`[auth] rejected ${request.method} ${path}`);
