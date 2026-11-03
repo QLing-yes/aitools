@@ -105,9 +105,9 @@ async function dist() {
         copied++;
         bytes += info.isFile() ? info.size : 0;
         const size = info.isFile() ? `，${(info.size / 1024 / 1024).toFixed(1)} MB` : "";
-        console.log(`\x1b[32m✅ [dist] ${item} → dist/${basename(item)}（${(performance.now() - start).toFixed(0)} ms${size}）\x1b[0m`);
+        console.log(`\x1b[32m✅ [dist] ${item} → dist/${basename(item)} （${(performance.now() - start).toFixed(0)} ms${size}）\x1b[0m`);
     }));
 
     const ms = (performance.now() - begin).toFixed(0);
-    console.log(`\x1b[32m✅ [dist] 复制${copied}项，跳过${skipped}项 → ${out}（${ms} ms，${(bytes / 1024 / 1024).toFixed(1)} MB）\x1b[0m\n`);
+    console.log(`\x1b[32m✅ [dist] 复制${copied}项，跳过${skipped}项 → ${out} （${ms} ms，${(bytes / 1024 / 1024).toFixed(1)} MB）\x1b[0m\n`);
 }
