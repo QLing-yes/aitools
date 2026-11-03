@@ -67,7 +67,7 @@ bun run start-hot-bg # 以正式环境启动，支持热更新，关闭终端不
 bun run fix     # 修复代码风格
 
 bun run generate  # 运行全部`generate_`开头的命令
-bun run generate_script  # 生成路由（一般不需要手动执行）
+bun run generate_script  # 生成路由、批量导出文件、生成 eden API类型树（一般不需要手动执行）
 
 bun run drizzle_studio  # drizzle可视化
 bun run generate_drigrate_migrate # 生成迁移并执行

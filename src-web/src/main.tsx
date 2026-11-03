@@ -1,10 +1,11 @@
 import { StrictMode } from "react"
 import { createRoot } from "react-dom/client"
-import { getCurrentWindow } from "@tauri-apps/api/window"
+import { RouterProvider } from "react-router"
 
 import "./index.css"
-import App from "./App.tsx"
+import { router } from "./router.tsx"
 import { ThemeProvider } from "@/components/theme-provider.tsx"
+import { showWindow, toggleMaximizeWindow } from "@/lib/tauri"
 
 // 禁用 webview 原生右键菜单（dev 模式默认启用，release 已默认禁用）
 document.addEventListener("contextmenu", (e) => e.preventDefault())
@@ -17,7 +18,7 @@ document.addEventListener("keydown", (e) => {
   }
   if (e.key === "F11") {
     e.preventDefault()
-    getCurrentWindow().toggleMaximize()
+    toggleMaximizeWindow()
   }
 })
 
@@ -28,13 +29,12 @@ document.addEventListener("drop", (e) => e.preventDefault())
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <ThemeProvider>
-      <App />
+      <RouterProvider router={router} />
     </ThemeProvider>
   </StrictMode>
 )
 
 // 页面挂载完成后显示窗口，避免白屏闪烁
-getCurrentWindow()
-  .show()
+showWindow()
   .then(() => console.log("[app] window shown"))
   .catch((e) => console.error("[app] window show failed:", e))

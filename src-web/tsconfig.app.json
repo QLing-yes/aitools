@@ -23,7 +23,9 @@
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true,
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*", "./types/gen-api/*"],
+      "@bun/*": ["./types/gen-api/*"],
+      "*": ["./types/gen-api/*"]
     }
   },
   "include": ["src"]

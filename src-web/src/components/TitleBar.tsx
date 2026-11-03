@@ -1,6 +1,11 @@
-import { useEffect, useState } from "react"
-import { getCurrentWindow } from "@tauri-apps/api/window"
 import { Minus, X, Maximize2, Minimize2 } from "lucide-react"
+import {
+  closeWindow,
+  minimizeWindow,
+  startDraggingWindow,
+  toggleMaximizeWindow,
+  useWindowState,
+} from "@/lib/tauri"
 
 /** 窗口操作按钮通用样式 */
 const btnClass =
@@ -15,44 +20,15 @@ const closeBtnClass =
  * 包含图标、标题、拖动区域、最小化、还原/最大化、关闭
  */
 export function TitleBar() {
-  const [isMaximized, setIsMaximized] = useState(false)
-  const appWindow = getCurrentWindow()
-
-  /** 同步窗口最大化状态 */
-  const syncState = async () => {
-    setIsMaximized(await appWindow.isMaximized())
-  }
-
-  useEffect(() => {
-    syncState()
-
-    /** 监听窗口 resize，状态变化时同步按钮图标 */
-    const unlistenResize = appWindow.onResized(syncState)
-
-    return () => {
-      unlistenResize.then((fn) => fn())
-    }
-  }, [])
-
-  /** 最小化窗口 */
-  const minimize = () => appWindow.minimize()
-
-  /** 切换最大化/还原 */
-  const toggleMaximize = async () => {
-    await appWindow.toggleMaximize()
-    syncState()
-  }
-
-  /** 关闭窗口 */
-  const close = () => appWindow.close()
+  const { isMaximized } = useWindowState()
 
   /** 拖动窗口（左键按住拖动区域时触发） */
   const startDragging = (e: React.MouseEvent) => {
-    if (e.button === 0) appWindow.startDragging()
+    if (e.button === 0) startDraggingWindow()
   }
 
   /** 双击拖动区域切换最大化/还原 */
-  const handleDoubleClick = () => toggleMaximize()
+  const handleDoubleClick = () => toggleMaximizeWindow()
 
   return (
     <header className="flex h-10 shrink-0 items-center justify-between border-b bg-background/80 backdrop-blur-sm select-none">
@@ -71,19 +47,19 @@ export function TitleBar() {
 
       {/* 右侧：窗口操作按钮 */}
       <div className="flex items-center gap-0.5 pr-2">
-        <button type="button" className={btnClass} onClick={minimize} aria-label="最小化" title="最小化">
+        <button type="button" className={btnClass} onClick={minimizeWindow} aria-label="最小化" title="最小化">
           <Minus className="size-4" />
         </button>
         <button
           type="button"
           className={btnClass}
-          onClick={toggleMaximize}
+          onClick={toggleMaximizeWindow}
           aria-label={isMaximized ? "还原" : "最大化"}
           title={isMaximized ? "还原" : "最大化"}
         >
           {isMaximized ? <Minimize2 className="size-4" /> : <Maximize2 className="size-4" />}
         </button>
-        <button type="button" className={closeBtnClass} onClick={close} aria-label="关闭" title="关闭">
+        <button type="button" className={closeBtnClass} onClick={closeWindow} aria-label="关闭" title="关闭">
           <X className="size-4" />
         </button>
       </div>
