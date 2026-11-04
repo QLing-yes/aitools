@@ -2,6 +2,8 @@ mod commands;
 mod state;
 #[cfg(not(debug_assertions))]
 mod sidecar;
+#[cfg(not(debug_assertions))]
+mod sidecar_terminal_log;
 
 use state::{CornerState, SidecarToken, WindowCorners};
 use tauri::Manager;

@@ -16,6 +16,8 @@ tauri-build = { version = "2", features = [] }
 tauri = { version = "2", features = ["devtools"] }
 tauri-plugin-shell = "2"
 rand = "0.9"
+chrono = { version = "0.4", default-features = false, features = ["clock"] }
+tokio = { version = "1", features = ["fs"] }
 tauri-plugin-window-state = "2.5.0"
 tauri-plugin-single-instance = "2.5.5"
 serde = { version = "1", features = ["derive"] }
