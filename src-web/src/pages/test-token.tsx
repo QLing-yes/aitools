@@ -10,7 +10,7 @@ export function TestTokenPage() {
   const testToken = async () => {
     setResult("请求中... POST /success")
     try {
-      const { data, error, status } = await client.success.post()
+      const { data, error, status } = await client.api.success.post()
       setResult(
         error
           ? `HTTP ${status}\n${JSON.stringify(error.value, null, 2)}`
@@ -28,7 +28,7 @@ export function TestTokenPage() {
         测试 Token 调用 POST /success
       </Button>
       {result && (
-        <pre className="mt-2 max-h-48 overflow-auto rounded-md border bg-muted p-2 font-mono text-xs whitespace-pre-wrap">
+        <pre className="mt-2 max-h-48 overflow-auto rounded-md bg-muted p-2 font-mono text-xs whitespace-pre-wrap">
           {result}
         </pre>
       )}

@@ -4,7 +4,7 @@ import { getCurrentWindow } from "@tauri-apps/api/window"
 import { useEffect, useState } from "react"
 
 /** 是否运行在 Tauri 环境（纯 web 部署时为 false，所有窗口能力降级为 no-op/默认值） */
-const isTauri = "__TAURI_INTERNALS__" in window
+export const isTauri = "__TAURI_INTERNALS__" in window
 
 /** 当前窗口句柄（仅 Tauri 环境创建，避免浏览器触发 IPC） */
 const appWindow = isTauri ? getCurrentWindow() : null

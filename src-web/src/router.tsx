@@ -1,5 +1,6 @@
 import { createHashRouter } from "react-router"
 import App from "./App"
+import { isTauri } from "@/lib/tauri"
 import { HomePage } from "./pages/home"
 import { TestTokenPage } from "./pages/test-token"
 
@@ -10,7 +11,8 @@ export const router = createHashRouter([
     Component: App,
     children: [
       { index: true, Component: HomePage },
-      { path: "test", Component: TestTokenPage },
+      // 鉴权测试页依赖桌面端 sidecar，仅桌面注册
+      ...(isTauri ? [{ path: "test", Component: TestTokenPage }] : []),
     ],
   },
 ])
