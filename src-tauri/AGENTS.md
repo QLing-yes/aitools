@@ -1,0 +1,11 @@
+# 规则
+- 窗口形态: `decorations:false` + `transparent:true`，圆角与标题栏由 src-web 外壳渲染；Rust 只持有 `WindowCorners`（默认四角 5px，改默认值必须同步前端 `lib/tauri` defaultCorners）并经 `get/set_window_corners` 读写。
+- 最大化时前端把圆角归零（避免遮挡任务栏），Rust 端不做该判断。
+- capabilities 白名单最小化：只开前端用到的 `core:window:allow-*`；新增窗口能力必须同步 `capabilities/default.json`，否则 IPC 静默失败。
+- sidecar 生命周期：仅 release 构建启动 `bun-service`（`app.shell().sidecar`，构建脚本产出 `target/release/bun-service.exe`，config 的 externalBin 留空）；dev 模式服务由 bun 直接启动，本模块不拉进程。
+- release 打包自检：`build.rs` 在 `RELEASE=1` 时断言 tauri.conf.json 的 externalBin 含 `bun-service`，缺失即中断构建（防止绕过 scripts 直接 `tauri build` 出无本地服务的坏包）。
+- sidecar 意外退出：监控任务 `emit("sidecar-terminated", code)` 通知前端（`lib/tauri.onSidecarTerminated`），本模块只发事件，UI 反馈归 src-web。
+- 令牌边界：本模块只负责生成一次性随机 `SidecarToken`、经 `TAURI_SIDECAR` 环境变量注入、经 `sidecar_token` 命令下发；HTTP 校验完全归 src-bun，窗口逻辑不得牵扯鉴权实现。
+- sidecar 进程与 stdin 管道需随任务持有，Tauri 退出前不得关闭；进程侧联动退出（watchParentExit）归 src-bun。
+- release 下 sidecar 原始输出追加到 exe 同级 `logs/sidecar_terminal_bun/年-月-日.log`；目录无法解析时静默跳过，不阻断启动。
+- 贴靠布局浮层：web 自绘最大化按钮在稳定版 WebView2 无 HTMAXBUTTON 申报通道（app-region 转发由 Chromium 子窗口与 DWM 直接协作，不经宿主 WndProc；window-drag-button CSS 属 WCO 场景）；待 WebView2 WCO API 转正后再接入，方案与试验记录见记忆/git 历史。

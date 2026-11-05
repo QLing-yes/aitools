@@ -45,10 +45,47 @@ pub fn run() {
 
             // 防隐藏兜底：前端挂载后应调用 show()；超时仍未显示则强制显示，避免窗口永远不可见
             if let Some(window) = app.get_webview_window("main") {
+                // Windows: 开启 WebView2 非客户区支持（ICoreWebView2Settings9）——
+                // -webkit-app-region: drag 区域由系统接管：触摸/鼠标拖窗、双击最大化原生可用
+                // （贴靠布局浮层需 web 自绘按钮申报 HTMAXBUTTON，稳定版 WebView2 无此通道，等 WCO 转正）
+                #[cfg(target_os = "windows")]
+                {
+                    // 去除 Win11 对无装饰窗口默认的 1px DWM 边框线（DWMWA_COLOR_NONE）；
+                    // 窗口阴影为 OS 固定样式（仅 conf 开关，无强度参数），保持现状
+                    if let Ok(hwnd) = window.hwnd() {
+                        use windows::Win32::Foundation::HWND;
+                        use windows::Win32::Graphics::Dwm::{
+                            DwmSetWindowAttribute, DWMWA_BORDER_COLOR,
+                        };
+                        const BORDER_NONE: u32 = 0xFFFF_FFFE;
+                        let raw = HWND(hwnd.0 as *mut core::ffi::c_void);
+                        unsafe {
+                            let _ = DwmSetWindowAttribute(
+                                raw,
+                                DWMWA_BORDER_COLOR,
+                                &BORDER_NONE as *const u32 as *const core::ffi::c_void,
+                                core::mem::size_of::<u32>() as u32,
+                            );
+                        }
+                    }
+
+                    let _ = window.with_webview(|w| unsafe {
+                        use webview2_com::Microsoft::Web::WebView2::Win32::ICoreWebView2Settings9;
+                        use windows::core::Interface;
+                        if let Ok(core) = w.controller().CoreWebView2() {
+                            if let Ok(settings) = core.Settings() {
+                                if let Ok(s9) = settings.cast::<ICoreWebView2Settings9>() {
+                                    let _ = s9.SetIsNonClientRegionSupportEnabled(true);
+                                }
+                            }
+                        }
+                    });
+                }
+
                 std::thread::spawn(move || {
                     std::thread::sleep(std::time::Duration::from_secs(5));
+                    // release 无控制台不打日志：兜底本身自愈，强显成功即恢复
                     if matches!(window.is_visible(), Ok(false)) {
-                        println!("[tauri] window not shown by frontend within 5s, forcing show");
                         let _ = window.show();
                         let _ = window.set_focus();
                     }

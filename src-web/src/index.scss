@@ -1,0 +1,399 @@
+@import "tailwindcss/index.css";
+@import url("tw-animate-css");
+@import "shadcn/tailwind.css";
+@import "@fontsource-variable/geist/index.css";
+@import "./styles/typeset.scss";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+    --font-heading: var(--font-sans);
+    --font-sans: 'Geist Variable', sans-serif;
+    --color-sidebar-ring: var(--sidebar-ring);
+    --color-sidebar-border: var(--sidebar-border);
+    --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+    --color-sidebar-accent: var(--sidebar-accent);
+    --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+    --color-sidebar-primary: var(--sidebar-primary);
+    --color-sidebar-foreground: var(--sidebar-foreground);
+    --color-sidebar: var(--sidebar);
+    --color-chart-5: var(--chart-5);
+    --color-chart-4: var(--chart-4);
+    --color-chart-3: var(--chart-3);
+    --color-chart-2: var(--chart-2);
+    --color-chart-1: var(--chart-1);
+    --color-ring: var(--ring);
+    --color-input: var(--input);
+    --color-border: var(--border);
+    --color-separator: var(--separator);
+    /* 界面按钮态色（标题栏/侧栏/分区导航统一） */
+    --color-chrome-hover: var(--chrome-hover);
+    --color-chrome-press: var(--chrome-press);
+    --color-chrome-on: var(--chrome-on);
+    --color-destructive: var(--destructive);
+    --color-accent-foreground: var(--accent-foreground);
+    --color-accent: var(--accent);
+    --color-muted-foreground: var(--muted-foreground);
+    --color-muted: var(--muted);
+    --color-secondary-foreground: var(--secondary-foreground);
+    --color-secondary: var(--secondary);
+    --color-primary-foreground: var(--primary-foreground);
+    --color-primary: var(--primary);
+    --color-popover-foreground: var(--popover-foreground);
+    --color-popover: var(--popover);
+    --color-card-foreground: var(--card-foreground);
+    --color-card: var(--card);
+    --color-foreground: var(--foreground);
+    --color-background: var(--background);
+    --color-shell: var(--shell);
+    --radius-sm: calc(var(--radius) * 0.6);
+    --radius-md: calc(var(--radius) * 0.8);
+    --radius-lg: var(--radius);
+    --radius-xl: calc(var(--radius) * 1.4);
+    --radius-2xl: calc(var(--radius) * 1.8);
+    --radius-3xl: calc(var(--radius) * 2.2);
+    --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+:root {
+    --background: oklch(1 0 0);
+    --shell: #F9FAFB;
+    --foreground: oklch(0.145 0 0);
+    --card: oklch(1 0 0);
+    --card-foreground: oklch(0.145 0 0);
+    --popover: oklch(1 0 0);
+    --popover-foreground: oklch(0.145 0 0);
+    --primary: oklch(0.205 0 0);
+    --primary-foreground: oklch(0.985 0 0);
+    --secondary: oklch(0.97 0 0);
+    --secondary-foreground: oklch(0.205 0 0);
+    --muted: oklch(0.97 0 0);
+    --muted-foreground: oklch(0.556 0 0);
+    --accent: oklch(0.93 0 0);
+    --accent-foreground: oklch(0.205 0 0);
+    --destructive: oklch(0.577 0.245 27.325);
+    /* 全局边框统一色：--border/--input 均为其别名，一律 1px */
+    --edge: oklch(0.9 0 0);
+    --border: var(--edge);
+    /* 全局分割线统一色（比边框略深，单源单粗 1px） */
+    --separator: oklch(0.88 0 0);
+    --input: var(--edge);
+    --ring: oklch(0.708 0 0);
+    --chart-1: oklch(0.87 0 0);
+    --chart-2: oklch(0.556 0 0);
+    --chart-3: oklch(0.439 0 0);
+    --chart-4: oklch(0.371 0 0);
+    --chart-5: oklch(0.269 0 0);
+    --radius: 0.625rem;
+    /* 侧栏底色与窗口壳色绑定（标题栏透明衬壳色），两主题恒统一 */
+    --sidebar: var(--shell);
+    --sidebar-foreground: oklch(0.145 0 0);
+    --sidebar-primary: oklch(0.205 0 0);
+    --sidebar-primary-foreground: oklch(0.985 0 0);
+    --sidebar-accent: var(--chrome-hover);
+    --sidebar-accent-foreground: oklch(0.205 0 0);
+    --sidebar-border: oklch(0.922 0 0);
+    --sidebar-ring: oklch(0.708 0 0);
+    /* 导航层着色料：壳色轻掺前景色（亮微暗、暗微亮），供标题栏/侧栏作半透磨砂底 */
+    --chrome-bg: color-mix(in oklab, var(--shell) 90%, var(--foreground));
+    /* 按钮态色单源：以前景色按透明度叠加壳/面板，明暗主题自动对称（悬停 10% < 按下 16% < 选中 20%） */
+    --chrome-hover: color-mix(in oklab, var(--foreground) 10%, transparent);
+    --chrome-press: color-mix(in oklab, var(--foreground) 16%, transparent);
+    --chrome-on: color-mix(in oklab, var(--foreground) 20%, transparent);
+}
+
+.dark {
+    --background: oklch(0.145 0 0);
+    --shell: oklch(0.205 0 0);
+    --edge: oklch(1 0 0 / 12%);
+    --foreground: oklch(0.985 0 0);
+    --card: oklch(0.205 0 0);
+    --card-foreground: oklch(0.985 0 0);
+    --popover: oklch(0.205 0 0);
+    --popover-foreground: oklch(0.985 0 0);
+    --primary: oklch(0.922 0 0);
+    --primary-foreground: oklch(0.205 0 0);
+    --secondary: oklch(0.269 0 0);
+    --secondary-foreground: oklch(0.985 0 0);
+    --muted: oklch(0.269 0 0);
+    --muted-foreground: oklch(0.708 0 0);
+    --accent: oklch(0.269 0 0);
+    --accent-foreground: oklch(0.985 0 0);
+    --destructive: oklch(0.704 0.191 22.216);
+    --border: var(--edge);
+    --separator: oklch(1 0 0 / 14%);
+    --input: var(--edge);
+    --ring: oklch(0.556 0 0);
+    --chart-1: oklch(0.87 0 0);
+    --chart-2: oklch(0.556 0 0);
+    --chart-3: oklch(0.439 0 0);
+    --chart-4: oklch(0.371 0 0);
+    --chart-5: oklch(0.269 0 0);
+    --sidebar: var(--shell);
+    --sidebar-foreground: oklch(0.985 0 0);
+    --sidebar-primary: oklch(0.488 0.243 264.376);
+    --sidebar-primary-foreground: oklch(0.985 0 0);
+    --sidebar-accent: var(--chrome-hover);
+    --sidebar-accent-foreground: oklch(0.985 0 0);
+    --sidebar-border: oklch(1 0 0 / 10%);
+    --sidebar-ring: oklch(0.556 0 0);
+}
+
+/* 基础层：@tailwindcss/vite 不编译 .scss 内的 @apply，等价声明直接写原生 CSS */
+@layer base {
+  * {
+    border-color: var(--border);
+    outline-color: color-mix(in oklab, var(--ring) 50%, transparent);
+  }
+
+  html,
+  body,
+  #root {
+    height: 100%;
+    /* 触屏/远控 touch 注入时禁整页弹性拉伸，防止位移露出透明窗口底 */
+    overscroll-behavior: none;
+    background-color: transparent;
+  }
+
+  body {
+    color: var(--foreground);
+  }
+
+  html {
+    /* @theme inline 不导出变量，font-sans 等价物必须写字体栈字面量 */
+    font-family: "Geist Variable", sans-serif;
+  }
+}
+
+/* 登录页渐变装饰：1:1 复刻 reactflow.dev hero（/img/bg-gradient-s.png，原生 400x457 光晕图） */
+.bg-gradient {
+  background-image: url("/bg-gradient.png");
+}
+
+/* 全局磨砂衬底：所有页面卡片与弹出选项统一 40% 半透 + 背景模糊；
+   双声明兼容旧 WebKit（不支持 color-mix 时保留基类实心令牌）；未分层声明优先于工具类 */[data-slot="card"],
+[data-slot="dropdown-menu-content"],
+[data-slot="dropdown-menu-submenu-content"] {
+  -webkit-backdrop-filter: blur(24px);
+  backdrop-filter: blur(24px);
+}
+
+[data-slot="card"] {
+  background-color: var(--card); /* 旧引擎解析不了 color-mix 时回落实心 */
+  background-color: color-mix(in oklab, var(--card) 40%, transparent);
+}
+
+[data-slot="dropdown-menu-content"],
+[data-slot="dropdown-menu-submenu-content"] {
+  background-color: var(--popover);
+  background-color: color-mix(in oklab, var(--popover) 40%, transparent);
+}
+
+/* 菜单条目之间留上下外边距缝隙（非内边距）；4px 使 hover/选中高亮块彻底分离 */
+[data-slot="dropdown-menu-content"] [data-slot="dropdown-menu-item"],
+[data-slot="dropdown-menu-submenu-content"] [data-slot="dropdown-menu-item"] {
+  margin-block: 4px;
+}
+
+/* 侧栏导航组基类 gap-0 会让选中/hover 高亮块粘连，统一拉开 4px（移动抽屉同源生效） */
+[data-slot="sidebar-menu"] {
+  gap: 0.25rem;
+}
+
+/* 透明铁律（层外 + !important，任何工具类/组件类都不可覆盖）：
+   html/body/#root 恒透明，Tauri 窗口透明靠 transparent:true，背景色一律由嵌套层（.bg-shell 等）实现 */
+html,
+body,
+#root {
+  background-color: transparent !important;
+  background-image: none !important;
+}
+
+/* 页面画布衬层基色（.bg-shell 仅由 PageCanvas/登录页等页面根使用，不存在应用级背景） */
+.bg-shell {
+  background-color: var(--shell);
+}
+
+/* 点状装饰：页面局部类，仅登录页引用（流程页用 React Flow 自带 Background；不进全局衬层） */
+.bg-dots {
+  background-image: radial-gradient(var(--border) 1px, transparent 1px);
+  background-size: 16px 16px;
+}
+
+/* 页面画布内容面：基础铺满（移动档抽屉不占位），≥md 时左边距跟随侧栏三态偏移 */
+[data-slot="page-canvas-surface"] {
+  left: 0;
+  transition: left 200ms ease-linear;
+}
+
+@media (width >= 48rem) {
+  [data-sidebar-mode="expanded"] [data-slot="page-canvas-surface"] {
+    left: var(--sidebar-width);
+  }
+  [data-sidebar-mode="icon"] [data-slot="page-canvas-surface"] {
+    /* 折叠宽 3rem 与 sidebar.tsx SIDEBAR_WIDTH_ICON 同值（锚点取不到该变量，兜底写明） */
+    left: var(--sidebar-width-icon, 3rem);
+  }
+}
+
+/* 全透明导航定式：标题栏/桌面侧栏无任何背景（页面画布 Portal 铺满全窗垫底，纹理直接可见）；
+   仅悬浮侧栏（浮在内容上）保留 chrome 72% 半透 + 磨砂保证可读 */
+@media (width >= 48rem) {
+  [data-sidebar="sidebar"] {
+    background-color: transparent; /* 压过 CLI 基类 bg-sidebar 工具类 */
+  }
+}
+
+[data-slot="sidebar-peek"] {
+  background-color: var(--chrome-bg);
+  background-color: color-mix(in oklab, var(--chrome-bg) 72%, transparent);
+  -webkit-backdrop-filter: blur(18px);
+  backdrop-filter: blur(18px);
+}
+
+/* 全局边框统一：--edge 单色、一律 1px。输入族/outline 按钮经 --border/--input 别名已归一；
+   card 与菜单表面用 ring（box-shadow）描边，覆盖其环色变量并入同源 */
+[data-slot="card"],
+[data-slot="dropdown-menu-content"],
+[data-slot="dropdown-menu-submenu-content"] {
+  --tw-ring-color: var(--edge);
+}
+
+/* 纯 CSS 亚克力近似（Win11 开始菜单质感，不依赖 OS 材质）：
+   细颗粒噪点 + 两处柔和晕染，叠在半透壳色衬底上（点状纹理不在此层，见 .bg-dots 页面局部装饰） */
+[data-slot="page-canvas-shell"] {
+  background-image:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.55 0 0 0 0 0.55 0 0 0 0 0.55 0 0 0 0.05 0'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E"),
+    radial-gradient(
+      60rem 40rem at 10% -10%,
+      color-mix(in oklab, var(--muted-foreground) 16%, transparent),
+      transparent 65%
+    ),
+    radial-gradient(
+      50rem 36rem at 95% 108%,
+      color-mix(in oklab, var(--muted-foreground) 12%, transparent),
+      transparent 60%
+    );
+  background-size: 140px 140px, auto, auto;
+}
+
+/* 主界面内容区：与衬层同色（亮 #F9FAFB / 暗 --shell），实色不透视 */
+[data-slot="page-canvas-surface"] {
+  background-color: var(--shell);
+}
+
+/* 侧栏按钮态色：按下比悬停深，选中最深（选中+按下仍显选中色，规则顺序保证） */
+[data-sidebar="menu-button"]:active,
+[data-sidebar="menu-sub-button"]:active,
+[data-sidebar="menu-action"]:active {
+  background-color: var(--chrome-press);
+}
+
+[data-sidebar="menu-button"][data-active],
+[data-sidebar="menu-sub-button"][data-active] {
+  background-color: var(--chrome-on);
+}
+
+/* 设置页分栏手柄线：CLI ResizableHandle 不透传 children，线画在 handle ::before 上；
+   恒显 1px separator 浅色、两端 4% 全透明，悬停/拖拽一律不变色 */
+[data-slot="resizable-handle"]::before {
+  content: "";
+  position: absolute;
+  inset-block: 0;
+  left: 50%;
+  width: 1px;
+  transform: translateX(-50%);
+  background-image: linear-gradient(
+    to bottom,
+    transparent 0%,
+    var(--separator) 4%,
+    var(--separator) 96%,
+    transparent 100%
+  );
+}
+
+/* 全局分割线统一：1px 渐变线，前后末端各 4% 完全透明、其余段实色；覆盖 CLI 实心 bg-border */
+[data-slot="separator"],
+[data-slot="dropdown-menu-separator"] {
+  background-color: transparent;
+}
+
+[data-slot="separator"][data-orientation="horizontal"],
+[data-slot="dropdown-menu-separator"] {
+  height: 1px;
+  background-image: linear-gradient(
+    to right,
+    transparent 0%,
+    var(--separator) 4%,
+    var(--separator) 96%,
+    transparent 100%
+  );
+}
+
+[data-slot="separator"][data-orientation="vertical"] {
+  width: 1px;
+  background-image: linear-gradient(
+    to bottom,
+    transparent 0%,
+    var(--separator) 4%,
+    var(--separator) 96%,
+    transparent 100%
+  );
+}
+
+/* 拖拽调宽时禁用侧栏宽度与手柄位置的过渡，保证跟手（无橡皮筋延迟） */
+[data-resizing-sidebar] [data-slot="sidebar-gap"],
+[data-resizing-sidebar] [data-slot="sidebar-container"],
+[data-resizing-sidebar] [data-slot="sidebar-resizer"],
+[data-resizing-sidebar] [data-slot="page-canvas-surface"] {
+  transition: none;
+}
+
+/* 圆形揭示主题切换：关闭默认交叉淡化，方向动画由下方规则驱动（参数来自 lib/theme-transition.ts 写入的 --vt-*） */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+
+/* 快照树底色：html/body 全透明（Tauri 圆角窗口），过渡期间任何未覆盖帧都会透见桌面，铺壳色兜底 */
+::view-transition {
+  background: var(--shell);
+}
+
+/* 切浅色：新快照从点击点扩散；切深色：旧快照收缩回点击点 */
+@keyframes vt-circle-in {
+  from {
+    clip-path: circle(0px at var(--vt-x) var(--vt-y));
+  }
+  to {
+    clip-path: circle(var(--vt-r) at var(--vt-x) var(--vt-y));
+  }
+}
+@keyframes vt-circle-out {
+  from {
+    clip-path: circle(var(--vt-r) at var(--vt-x) var(--vt-y));
+  }
+  to {
+    clip-path: circle(0px at var(--vt-x) var(--vt-y));
+  }
+}
+
+/* 快照层叠：切深色时旧快照在顶层被收缩，切浅色时新快照在顶层扩散 */
+::view-transition-old(root),
+.dark::view-transition-new(root) {
+  z-index: 1;
+}
+::view-transition-new(root),
+.dark::view-transition-old(root) {
+  z-index: 9999;
+}
+
+/* 静态 clip 兜底：动画挂载前新快照保持 0 半径，杜绝整屏闪帧 */
+html:not(.dark)::view-transition-new(root) {
+  clip-path: circle(0px at var(--vt-x, 50vw) var(--vt-y, 50vh));
+  animation: vt-circle-in 300ms ease-in forwards;
+}
+.dark::view-transition-old(root) {
+  animation: vt-circle-out 300ms ease-in forwards;
+}

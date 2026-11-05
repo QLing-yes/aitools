@@ -20,31 +20,38 @@ export default defineConfig([
     },
     rules: {
       'react-refresh/only-export-components': 'off',
-      // 架构边界：Tauri IPC 只允许在 @/lib/tauri，Eden 只允许在 @/api
+      // 架构边界：Tauri IPC 只允许在 @/lib/tauri，Eden 只允许在 @/lib/api
       'no-restricted-imports': ['error', {
         patterns: [
           { group: ['@tauri-apps/api*'], message: 'Tauri IPC 只允许在 @/lib/tauri 中使用' },
-          { group: ['@elysia/eden'], message: 'Eden 只允许在 @/api 中使用' },
+          { group: ['@elysia/eden'], message: 'Eden 只允许在 @/lib/api 中使用' },
         ],
       }],
-      // 网络请求统一走 @/api（authFetcher 注入鉴权头）
-      'no-restricted-globals': ['error', { name: 'fetch', message: '请通过 @/api 发起请求' }],
+      // 网络请求统一走 @/lib/api（onRequest 注入鉴权头）
+      'no-restricted-globals': ['error', { name: 'fetch', message: '请通过 @/lib/api 发起请求' }],
     },
   },
   {
     files: ['src/lib/tauri/**/*.ts'],
     rules: {
       'no-restricted-imports': ['error', {
-        patterns: [{ group: ['@elysia/eden'], message: 'Eden 只允许在 @/api 中使用' }],
+        patterns: [{ group: ['@elysia/eden'], message: 'Eden 只允许在 @/lib/api 中使用' }],
       }],
     },
   },
   {
-    files: ['src/api/**/*.ts'],
+    files: ['src/lib/api.ts'],
     rules: {
       'no-restricted-imports': ['error', {
         patterns: [{ group: ['@tauri-apps/api*'], message: 'Tauri IPC 只允许在 @/lib/tauri 中使用' }],
       }],
+    },
+  },
+  {
+    // AI 对话传输层：允许封装 fetch（AI SDK transport 注入 sidecar 鉴权头）
+    files: ['src/lib/chat.ts'],
+    rules: {
+      'no-restricted-globals': 'off',
     },
   },
 ])

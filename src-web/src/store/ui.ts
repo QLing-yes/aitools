@@ -4,21 +4,55 @@
 import { create } from "zustand"
 import { persist } from "zustand/middleware"
 
-/** 持久化的 UI 状态字段与行为 */
-interface UiState {
-  /** 侧栏是否折叠 */
-  sidebarCollapsed: boolean
-  /** 设置侧栏折叠状态 @param collapsed 是否折叠 */
-  setSidebarCollapsed: (collapsed: boolean) => void
+/** 侧栏显示模式：完全显示 / 图标折叠 / 完全隐藏 */
+export type SidebarMode = "expanded" | "icon" | "hidden"
+
+/** 三态循环顺序：显示 → 折叠 → 隐藏 → 显示 */
+const modeNext: Record<SidebarMode, SidebarMode> = {
+  expanded: "icon",
+  icon: "hidden",
+  hidden: "expanded",
 }
 
-/** 全局 UI store；仅 sidebarCollapsed 序列化到 localStorage（函数值自动跳过） */
+/** 持久化的 UI 状态字段与行为 */
+interface UiState {
+  /** 侧栏当前显示模式 */
+  sidebarMode: SidebarMode
+  /** 设置侧栏模式 @param mode 目标模式 */
+  setSidebarMode: (mode: SidebarMode) => void
+  /** 按 显示→折叠→隐藏 顺序切换下一模式 */
+  cycleSidebarMode: () => void
+  /** 侧栏展开宽度（px，拖拽调节后持久化） */
+  sidebarWidth: number
+  /** 设置侧栏宽度 @param width 像素宽度 */
+  setSidebarWidth: (width: number) => void
+}
+
+/** v0→v1 迁移：二态 sidebarCollapsed 映射三态，丢弃旧字段 */
+function migrateUiState(
+  persisted: unknown
+): Pick<UiState, "sidebarMode" | "sidebarWidth"> {
+  const s = (persisted ?? {}) as Partial<UiState> & {
+    sidebarCollapsed?: boolean
+  }
+  return {
+    sidebarMode:
+      s.sidebarMode ?? (s.sidebarCollapsed ? ("icon" as const) : "expanded"),
+    sidebarWidth: s.sidebarWidth ?? 256,
+  }
+}
+
+/** 全局 UI store；仅数据字段序列化到 localStorage（函数值自动跳过） */
 export const useUiStore = create<UiState>()(
   persist(
     (set) => ({
-      sidebarCollapsed: false,
-      setSidebarCollapsed: (collapsed) => set({ sidebarCollapsed: collapsed }),
+      sidebarMode: "expanded",
+      setSidebarMode: (mode) => set({ sidebarMode: mode }),
+      cycleSidebarMode: () =>
+        set((s) => ({ sidebarMode: modeNext[s.sidebarMode] })),
+      sidebarWidth: 256,
+      setSidebarWidth: (width) => set({ sidebarWidth: width }),
     }),
-    { name: "aitools-ui" }
+    { name: "aitools-ui", version: 1, migrate: migrateUiState }
   )
 )

@@ -16,9 +16,11 @@
     "drizzle_studio": "bun --bun run drizzle-kit studio"
   },
   "dependencies": {
+    "@ai-sdk/openai-compatible": "^3.0.84",
     "@elysia/cors": "next",
     "@elysia/openapi": "next",
     "@elysia/static": "next",
+    "ai": "^7.0.162",
     "drizzle-orm": "1.0.0-rc.5-5935859",
     "elysia": "next",
     "exact-mirror": "^1.2.6",

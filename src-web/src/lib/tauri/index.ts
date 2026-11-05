@@ -1,7 +1,7 @@
 import { invoke } from "@tauri-apps/api/core"
 import { listen } from "@tauri-apps/api/event"
 import { getCurrentWindow } from "@tauri-apps/api/window"
-import { useEffect, useState } from "react"
+import { useSyncExternalStore } from "react"
 
 /** 是否运行在 Tauri 环境（纯 web 部署时为 false，所有窗口能力降级为 no-op/默认值） */
 export const isTauri = "__TAURI_INTERNALS__" in window
@@ -34,6 +34,18 @@ export async function closeWindow(): Promise<void> {
 /** 开始拖动窗口（左键按住拖动区域时触发；浏览器降级 no-op） */
 export function startDraggingWindow(): void {
   void appWindow?.startDragging()
+}
+
+/** 设置窗口总是置顶（浏览器降级 no-op）
+ * @param on 是否置顶 */
+export async function setAlwaysOnTop(on: boolean): Promise<void> {
+  await appWindow?.setAlwaysOnTop(on)
+}
+
+/** 查询窗口是否置顶（浏览器返回 false）
+ * @returns 是否置顶 */
+export async function isAlwaysOnTop(): Promise<boolean> {
+  return appWindow ? appWindow.isAlwaysOnTop() : Promise.resolve(false)
 }
 
 // --------------------------------- 窗口圆角 ---------------------------------
@@ -107,36 +119,90 @@ export function sidecarToken(): Promise<string> {
 
 // --------------------------------- 窗口状态 ---------------------------------
 
-/** 窗口状态：最大化标志 + 四角圆角 */
+/** 监听 sidecar 意外退出（浏览器返回空取消函数）
+ * @param callback 退出回调 @param code 退出码（信号终止时为 null）
+ * @returns 取消监听函数 Promise */
+export function onSidecarTerminated(
+  callback: (code: number | null) => void
+): Promise<() => void> {
+  if (!isTauri) return Promise.resolve(() => {})
+  return listen<number | null>("sidecar-terminated", (e) => callback(e.payload))
+}
+
+/** 窗口状态：最大化标志 + 四角圆角 + CSS border-radius 串 */
 export interface WindowState {
+  /** 是否最大化 */
+  isMaximized: boolean
+  /** 四角圆角 */
+  corners: WindowCorners
+  /** 直接可用的 border-radius：最大化时为 0（避免遮挡任务栏），否则四角拼接 */
+  radius: string
+}
+
+/** 订阅窗口状态（模块级单源：全应用一条 IPC/事件链，useSyncExternalStore 共享快照）
+ * @returns 当前窗口状态
+ */
+
+/** 全局唯一快照（不可变对象，变更时整体替换） */
+let windowSnapshot: WindowSnapshot = { isMaximized: false, corners: defaultCorners }
+const windowListeners = new Set<() => void>()
+/** 是否已建立全局订阅（仅 Tauri 环境） */
+let windowSubscribed = false
+
+/** 窗口状态原始快照（不含派生 radius） */
+interface WindowSnapshot {
   /** 是否最大化 */
   isMaximized: boolean
   /** 四角圆角 */
   corners: WindowCorners
 }
 
-/** 订阅窗口状态（App 与 TitleBar 共用的单一订阅源；浏览器环境恒为默认值）
- * @returns 当前窗口状态
- */
+function emitWindow(next: WindowSnapshot) {
+  windowSnapshot = next
+  windowListeners.forEach((l) => l())
+}
+
+/** 首次消费时建立全局订阅：初始同步 + resize 最大化探测 + 圆角广播 */
+function ensureWindowSubscription(): void {
+  if (windowSubscribed || !appWindow) return
+  windowSubscribed = true
+  const win = appWindow
+  win
+    .isMaximized()
+    .then((v) => emitWindow({ ...windowSnapshot, isMaximized: v }))
+    .catch(() => {})
+  getWindowCorners()
+    .then((c) => emitWindow({ ...windowSnapshot, corners: c }))
+    .catch(() => {})
+  // 事件回调不被 await：内部自吞异常，IPC 失败跳过本次同步，下次 resize 再覆盖
+  win
+    .onResized(async () => {
+      try {
+        const v = await win.isMaximized()
+        // 值未变化跳过广播：拖窗期间 resize 高频，避免无谓 re-render
+        if (v !== windowSnapshot.isMaximized)
+          emitWindow({ ...windowSnapshot, isMaximized: v })
+      } catch {
+        /* 忽略：窗口销毁竞态等场景 */
+      }
+    })
+    .catch(() => {})
+  onWindowCornersChange((c) => emitWindow({ ...windowSnapshot, corners: c })).catch(
+    () => {},
+  )
+}
+
+function subscribeWindow(cb: () => void): () => void {
+  windowListeners.add(cb)
+  ensureWindowSubscription()
+  return () => windowListeners.delete(cb)
+}
+
 export function useWindowState(): WindowState {
-  const [isMaximized, setIsMaximized] = useState(false)
-  const [corners, setCorners] = useState(defaultCorners)
-
-  /** 初始同步一次，随后跟随 resize 与圆角广播更新 */
-  useEffect(() => {
-    if (!appWindow) return
-    const syncMaximized = async () => {
-      setIsMaximized(await appWindow.isMaximized())
-    }
-    syncMaximized()
-    getWindowCorners().then(setCorners).catch(() => {})
-    const unlistenResize = appWindow.onResized(syncMaximized)
-    const unlistenCorners = onWindowCornersChange(setCorners)
-    return () => {
-      unlistenResize.then((fn) => fn())
-      unlistenCorners.then((fn) => fn())
-    }
-  }, [])
-
-  return { isMaximized, corners }
+  const snap = useSyncExternalStore(subscribeWindow, () => windowSnapshot)
+  /** border-radius 串：最大化归零，其余四角拼接（浏览器恒为默认圆角） */
+  const radius = snap.isMaximized
+    ? "0"
+    : `${snap.corners.topLeft}px ${snap.corners.topRight}px ${snap.corners.bottomRight}px ${snap.corners.bottomLeft}px`
+  return { ...snap, radius }
 }

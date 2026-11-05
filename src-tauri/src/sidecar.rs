@@ -2,7 +2,7 @@
 
 use std::path::PathBuf;
 
-use tauri::Manager;
+use tauri::{Emitter, Manager};
 use tauri_plugin_shell::ShellExt;
 use tauri_plugin_shell::process::CommandEvent;
 
@@ -22,24 +22,37 @@ async fn write(log: &mut Option<SidecarTerminalLog>, line: &str) {
 }
 
 /// 启动 Bun 构建的 Sidecar 进程：注入一次性随机令牌，并转发其日志
+/// 失败仅记录不中断——桌面版2 的 /api 走远程服务器，本地 bun 缺失不应阻止应用启动
 pub fn spawn_bun_sidecar(app: &tauri::App) {
     let token = &app.state::<SidecarToken>().0;
-    let msg = format!("[tauri] spawning bun sidecar, pid: {}", std::process::id());
+    let msg = "[tauri] spawning bun sidecar".to_string();
     println!("{msg}");
 
-    let (mut rx, child) = app
+    let spawned = app
         .shell()
         .sidecar("bun-service")
-        .expect("Failed to create sidecar command")
-        .env("TAURI_SIDECAR", format!(r#"{{"token":"{token}"}}"#))
-        .spawn()
-        .expect("Failed to spawn sidecar");
+        .and_then(|cmd| cmd.env("TAURI_SIDECAR", format!(r#"{{"token":"{token}"}}"#)).spawn());
+    let (mut rx, child) = match spawned {
+        Ok(pair) => pair,
+        Err(e) => {
+            let msg = format!("[tauri] bun sidecar 启动失败，应用继续运行: {e}");
+            eprintln!("{msg}");
+            // release GUI 无控制台，失败也要在终端日志目录留痕（异步写不阻塞 setup）
+            let mut log = log_dir().map(SidecarTerminalLog::new);
+            tauri::async_runtime::spawn(async move {
+                write(&mut log, &msg).await;
+            });
+            return;
+        }
+    };
+    let pid = child.pid();
+    let handle = app.app_handle().clone();
 
     // child 随任务持有，保证 stdin 管道在 Tauri 退出前不关闭
     tauri::async_runtime::spawn(async move {
         let _child = child;
         let mut log = log_dir().map(SidecarTerminalLog::new);
-        write(&mut log, &msg).await;
+        write(&mut log, &format!("{msg}, pid: {pid}")).await;
 
         while let Some(event) = rx.recv().await {
             match event {
@@ -57,6 +70,8 @@ pub fn spawn_bun_sidecar(app: &tauri::App) {
                     let msg = format!("[tauri] bun sidecar exited, code: {:?}", p.code);
                     println!("{msg}");
                     write(&mut log, &msg).await;
+                    // 通知前端：本地 /offline 能力已失效（emit 失败仅表示无人监听，忽略）
+                    let _ = handle.emit("sidecar-terminated", p.code);
                     break;
                 }
                 _ => {}

@@ -26,15 +26,15 @@ pub fn set_window_corners(
         bottom_right,
         bottom_left,
     };
-    *state.0.lock().unwrap() = corners;
+    // 锁中毒取回内值继续：best-effort 路径，panic=abort 下不能让读锁崩掉应用
+    *state.0.lock().unwrap_or_else(|e| e.into_inner()) = corners;
     app.emit("window-corners-changed", corners)
         .map_err(|e| e.to_string())?;
-    println!("[tauri] window corners set to {:?}", corners);
     Ok(())
 }
 
 /// 获取当前窗口四角圆角
 #[tauri::command]
 pub fn get_window_corners(state: tauri::State<'_, CornerState>) -> WindowCorners {
-    *state.0.lock().unwrap()
+    *state.0.lock().unwrap_or_else(|e| e.into_inner())
 }
