@@ -1,8 +1,11 @@
-// 全局 UI 状态：zustand + persist（localStorage 落盘，跨重启保留）
+// 全局 UI 状态：zustand + persist（键名登记见 lib/storage.ts，跨重启保留）
 // 约定：跨组件共享且需要持久化的状态放这里；组件内瞬时状态用 useState，不落盘
 
 import { create } from "zustand"
 import { persist } from "zustand/middleware"
+
+import { STORAGE_KEYS } from "@/lib/storage"
+import { WIDTH_MAX, WIDTH_MIN } from "@/lib/sidebar-channel"
 
 /** 侧栏显示模式：完全显示 / 图标折叠 / 完全隐藏 */
 export type SidebarMode = "expanded" | "icon" | "hidden"
@@ -31,6 +34,54 @@ export function modeFromOpen(open: boolean, current: SidebarMode): SidebarMode {
   return current === "hidden" ? "hidden" : "icon"
 }
 
+/** 数值夹取（设置页滑杆与持久化数据共用同一约束） */
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, Math.round(value)))
+}
+
+/** 窗口四角圆角半径（px，0=直角），字段名即 CSS border-radius 的四角顺序 */
+export interface WindowCorners {
+  /** 左上角 */
+  topLeft: number
+  /** 右上角 */
+  topRight: number
+  /** 右下角 */
+  bottomRight: number
+  /** 左下角 */
+  bottomLeft: number
+}
+
+/** 可单独调节的角位 */
+export type CornerSide = keyof WindowCorners
+
+/** 侧栏展开宽默认档（px，与 index.scss `--sidebar-width` 兜底同值） */
+const SIDEBAR_WIDTH_DEFAULT = 260
+/** 磨砂自糊半径默认档（px，与 index.scss `--glass-blur` 兜底同值） */
+const BLUR_DEFAULT = 12
+/** 磨砂半径上限（px，供设置页滑杆同档） */
+export const BLUR_MAX = 48
+/** 内容面壳色不透明度默认档（%，与 index.scss `--film-a` 兜底同值） */
+const FILM_DEFAULT = 76
+/** 不透明度上限（%，100 即无透出） */
+export const FILM_MAX = 100
+/** 圆角默认半径，与 index.scss `--app-radius` 兜底同值 */
+const RADIUS_DEFAULT = 5
+/** 圆角半径上限（px，供设置页滑杆同档） */
+export const RADIUS_MAX = 24
+
+/** 脏数据防线：持久值可能是非数字或 NaN/Infinity（手改存储即得），一律回落默认档
+ * （否则会写成 `--app-radius: NaNpx`，整条声明被 CSS 丢弃） @param value 持久值 @param fallback 默认档 */
+function stored(value: unknown, fallback: number): number {
+  return typeof value === "number" && Number.isFinite(value)
+    ? value
+    : fallback
+}
+
+/** 四角同值 @param px 半径 @returns 四角对象 */
+function cornersOf(px: number): WindowCorners {
+  return { topLeft: px, topRight: px, bottomRight: px, bottomLeft: px }
+}
+
 /** 持久化的 UI 状态字段与行为 */
 interface UiState {
   /** 侧栏当前显示模式 */
@@ -43,19 +94,51 @@ interface UiState {
   sidebarWidth: number
   /** 设置侧栏宽度 @param width 像素宽度 */
   setSidebarWidth: (width: number) => void
+  /** 内容面自糊半径（px，0=不糊；CSS 侧唯一模糊来源） */
+  glassBlur: number
+  /** 设置自糊半径 @param px 像素半径 */
+  setGlassBlur: (px: number) => void
+  /** 内容面壳色不透明度（%；衬层恒实心，不受此项影响） */
+  glassFilm: number
+  /** 设置不透明度 @param percent 百分比 */
+  setGlassFilm: (percent: number) => void
+  /** 窗口四角圆角半径（个性化可调，经圆角通道作用于壳根、描边与 VT 底色层） */
+  corners: WindowCorners
+  /** 设置某个角的半径 @param side 角位 @param px 半径（夹到 0–RADIUS_MAX） */
+  setCorner: (side: CornerSide, px: number) => void
+  /** 个性化恢复默认档（磨砂两项 + 四角半径；不动侧栏模式与宽度） */
+  resetPersonalize: () => void
 }
 
-/** v0→v1 迁移：二态 sidebarCollapsed 映射三态，丢弃旧字段 */
-function migrateUiState(
-  persisted: unknown
-): Pick<UiState, "sidebarMode" | "sidebarWidth"> {
-  const s = (persisted ?? {}) as Partial<UiState> & {
-    sidebarCollapsed?: boolean
-  }
+/** UI store 的数据字段（迁移函数只回这些） */
+type UiData = Pick<
+  UiState,
+  "sidebarMode" | "sidebarWidth" | "glassBlur" | "glassFilm" | "corners"
+>
+
+/** 把任意持久化载荷读成当前版本的数据字段：补齐缺失、收敛脏值、执行版本迁移
+ * （v0→v1 二态侧栏→三态；v1→v2 加磨砂三项；v2→v3 撤系统材质，glassFilm 回旧背景档 76；
+ *   v3→v4 圆角半径从 Rust 备忘录迁进本 store，四角独立持久化）
+ * @param persisted 存储里的 state 载荷（版本迁移后的结果） @returns 合法数据字段 */
+function readUiData(persisted: unknown): UiData {
+  const s = (persisted ?? {}) as Partial<UiState> & { sidebarCollapsed?: boolean }
+  const c = s.corners
   return {
     sidebarMode:
       s.sidebarMode ?? (s.sidebarCollapsed ? ("icon" as const) : "expanded"),
-    sidebarWidth: s.sidebarWidth ?? 260,
+    sidebarWidth: clamp(
+      stored(s.sidebarWidth, SIDEBAR_WIDTH_DEFAULT),
+      WIDTH_MIN,
+      WIDTH_MAX
+    ),
+    glassBlur: clamp(stored(s.glassBlur, BLUR_DEFAULT), 0, BLUR_MAX),
+    glassFilm: FILM_DEFAULT,
+    corners: {
+      topLeft: clamp(stored(c?.topLeft, RADIUS_DEFAULT), 0, RADIUS_MAX),
+      topRight: clamp(stored(c?.topRight, RADIUS_DEFAULT), 0, RADIUS_MAX),
+      bottomRight: clamp(stored(c?.bottomRight, RADIUS_DEFAULT), 0, RADIUS_MAX),
+      bottomLeft: clamp(stored(c?.bottomLeft, RADIUS_DEFAULT), 0, RADIUS_MAX),
+    },
   }
 }
 
@@ -67,9 +150,30 @@ export const useUiStore = create<UiState>()(
       setSidebarMode: (mode) => set({ sidebarMode: mode }),
       cycleSidebarMode: () =>
         set((s) => ({ sidebarMode: modeNext[s.sidebarMode] })),
-      sidebarWidth: 260,
+      sidebarWidth: SIDEBAR_WIDTH_DEFAULT,
       setSidebarWidth: (width) => set({ sidebarWidth: width }),
+      glassBlur: BLUR_DEFAULT,
+      setGlassBlur: (px) => set({ glassBlur: clamp(px, 0, BLUR_MAX) }),
+      glassFilm: FILM_DEFAULT,
+      setGlassFilm: (percent) => set({ glassFilm: clamp(percent, 0, FILM_MAX) }),
+      corners: cornersOf(RADIUS_DEFAULT),
+      setCorner: (side, px) =>
+        set((s) => ({
+          corners: { ...s.corners, [side]: clamp(px, 0, RADIUS_MAX) },
+        })),
+      resetPersonalize: () =>
+        set({
+          glassBlur: BLUR_DEFAULT,
+          glassFilm: FILM_DEFAULT,
+          corners: cornersOf(RADIUS_DEFAULT),
+        }),
     }),
-    { name: "aitools-ui", version: 1, migrate: migrateUiState }
+    {
+      name: STORAGE_KEYS.ui,
+      version: 4,
+      migrate: readUiData,
+      // merge 每次加载都跑（migrate 只在版本变化时跑），同版本的手改脏值也在这里挡住
+      merge: (persisted, current) => ({ ...current, ...readUiData(persisted) }),
+    }
   )
 )

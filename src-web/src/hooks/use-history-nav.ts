@@ -1,4 +1,4 @@
-// 路由历史状态：供标题栏前进/后退按钮判断是否到尽头
+// 路由历史状态：供标题栏前进/后退按钮与登录页返回入口判断是否到尽头
 
 import { useEffect, useRef, useState } from "react"
 import { useLocation } from "react-router"

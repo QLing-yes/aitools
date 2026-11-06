@@ -103,9 +103,14 @@
        260px 与 store/ui.ts 的 sidebarWidth 默认值同值，折叠宽 3rem 与注册表 SIDEBAR_WIDTH_ICON 同值 */
   --sidebar-width: 260px;
   --sidebar-width-icon: 3rem;
-  /* 圆角通道兜底（真值由 lib/tauri 写到文档根）：与 Rust WindowCorners::default、
-       lib/tauri defaultCorners 三处同值，改默认必须同步——壳根与 VT 快照底色层共用 */
+  /* 圆角通道兜底（真值由 lib/radius-channel 写到文档根）：与 store/ui.ts 的 RADIUS_DEFAULT
+       同值，改默认两处一起动——壳根、窗口描边与 VT 快照底色层共用 */
   --app-radius: 5px;
+  /* CSS 磨砂旋钮（真值由 lib/glass-channel 写进文档根，此处仅兜底）：
+     `--glass-blur` 内容面自糊半径；`--film-a` 内容面壳色不透明度 %。
+     默认档与上限在 store/ui.ts 的 BLUR/FILM_DEFAULT·MAX，改一处两处一起动；只作用于 HTML 渲染，衬层恒实心 */
+  --glass-blur: 12px;
+  --film-a: 76;
   /* 导航层着色料：壳色轻掺前景色（亮微暗、暗微亮），供标题栏/侧栏作半透磨砂底 */
   --chrome-bg: color-mix(in oklab, var(--shell) 90%, var(--foreground));
   /* 按钮态色单源：以前景色按透明度叠加壳/面板，明暗主题自动对称（悬停 10% < 按下 16% < 选中 20%） */
@@ -190,7 +195,7 @@ html {
    2) [data-slot=card][data-flow-node]              流程节点退出磨砂（拖动掉帧）
    3) [data-slot=page-canvas-surface]               内容面着色+12px 磨砂；left 由 page-canvas 直写 style
    4) [data-sidebar=sidebar]                        桌面档强制透明（压过 CLI 基类 bg-sidebar）
-   5) [data-slot=sidebar-peek]                      悬浮侧栏几何+磨砂（覆写 SheetContent 的 data-slot 与 side=left 定位类）
+   5) [data-slot=sidebar-peek]                      悬浮侧栏几何+磨砂+1px 极浅描边（覆写 SheetContent 的 data-slot 与 side=left 定位类）
    6) [data-slot=sheet-overlay]:has(~ …)            非模态 Sheet 不压遮罩（Portal 内遮罩与面板夹 Base UI 辅助 span，故用 ~）
    7) [data-slot=resizable-handle]::before          拖拽线（CLI ResizableHandle 不透传 children，只能画伪元素）
    8) [data-slot=separator|item-separator|dropdown-menu-separator] 淡出线（Item 会改写 data-slot，需单列）
@@ -294,14 +299,15 @@ body,
   background-size: 16px 16px;
 }
 
-/* 页面画布内容面：半透壳色 + 12px 磨砂（衬层的噪点/晕染透过来，即"主界面半透底色"）；
-   left 由 page-canvas.surfaceLeft() 直写 style，本处只管着色、模糊与过渡 */
+/* 页面画布内容面：半透壳色 + 自糊（衬层的噪点/晕染透过来，即"主界面半透底色"）；
+   强度与半径走 --film-a / --glass-blur（lib/glass-channel 写通道，默认 76% + 12px = 原样），
+   left 由 page-canvas.surfaceLeft() 直写 style。背景色只看这两个令牌，与系统磨砂开关无关 */
 [data-slot="page-canvas-surface"] {
   background-color: var(--shell);
-  background-color: color-mix(in oklab, var(--shell) 76%, transparent);
-  -webkit-backdrop-filter: blur(12px);
-  backdrop-filter: blur(12px);
-  transition: left 200ms ease-linear;
+  background-color: color-mix(in oklab, var(--shell) calc(var(--film-a) * 1%), transparent);
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  backdrop-filter: blur(var(--glass-blur));
+  transition: left 200ms ease-linear, background-color 160ms ease;
 }
 
 /* 全透明导航定式：标题栏/桌面侧栏无任何背景（页面画布 Portal 铺满全窗垫底，纹理直接可见）；
@@ -314,12 +320,14 @@ body,
   }
 }
 
-/* 悬浮侧栏（官方非模态 Sheet，走 body Portal 以全窗为基准）：让位标题栏带 + 四周留缝 + 跟随宽度通道 */
+/* 悬浮侧栏（官方非模态 Sheet，走 body Portal 以全窗为基准）：让位标题栏带 + 四周留缝 + 跟随宽度通道；
+   1px 极浅描边与窗口描边/card 环同源（--edge），border-box 下不改变几何 */
 [data-slot="sidebar-peek"] {
   inset: calc(var(--spacing-titlebar) + 0.5rem) auto 0.5rem 0.5rem;
   width: var(--sidebar-width);
   max-width: none;
   height: auto;
+  border: 1px solid var(--edge);
   background-color: var(--chrome-bg);
   background-color: color-mix(in oklab, var(--chrome-bg) 72%, transparent);
   -webkit-backdrop-filter: blur(18px);

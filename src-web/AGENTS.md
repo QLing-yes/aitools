@@ -3,6 +3,7 @@
 组件化：能独立成组件的必须组件化。
 光标：注意根据场景和元素切换合适的光标样式。
 屏幕适配：注意需要兼容不同设备屏幕尺寸（如手机、平板、PC 等尺寸），避免在不同设备上显示异常。
+状态持久化：你可以自行判断任何状态是否需要持久化。持久化键一律登记在 `lib/storage.ts`（值一经发布不可再改，改了等于丢用户数据），组件与 store 里禁止写键名字面量；裸值读写走该模块的 `readText/writeText`（隐私模式/配额失败自带容错），第三方库与 dev 工具自管的键只做索引登记、不反向接管。
 
 Tailwind：
 - 如果需要复用类名提取为常量，命名以 Class/Style 结尾（IDE 补全依赖此后缀），定义与.vscode/settings.json。
@@ -28,7 +29,7 @@ shadcn ui：
 - 主干链零背景：窗口→html/body/#root→壳根→provider→行→标题栏→侧栏→inset→页面根全链路不着色。三层由 index.scss 层外 `!important` 锁死；窗口靠 `transparent:true`。
 - 主题必须同时声明 UA 着色方案：`html{color-scheme:light}` / `html.dark{color-scheme:dark}`。主干透明 ⇒ 壳根圆角、Win11 窗口圆角等「未被自绘覆盖」的像素由 UA 默认画布填充，缺它暗色下顶边整条发白（滚动条/表单控件也恒亮）。
 - 窗口描边归 web：conf 已关 `decorations` 与 `shadow`，OS 不画线也不画阴影 → 壳根末尾 `[data-app-edge]` 用 `--edge` 自绘 1px inset 描边（跟随壳根圆角、`pointer-events:none`、仅桌面渲染）。已知差异：悬浮侧栏 peek 是 body Portal（z-50），展开时压住左缘那 1px。缩放热区为窗口最外约 4 CSS px（`SM_CXFRAME/CYFRAME`），贴边可点控件一律留 ≥8px——现有标题栏/侧栏内缩已满足，纵向滚动条贴右缘属已知风险点。
-- 圆角单源：壳根与登录页根挂 `[data-app-radius]`，值走文档根 `--app-radius`（最大化归零），VT 快照底色层同值；组件内禁止再写 inline `borderRadius`。
+- 圆角单源：四角半径是**用户设置**（`store/ui.ts` 的 `corners`，0–`RADIUS_MAX`，0=直角），由 `lib/radius-channel.publishRadius` 合成文档根 `--app-radius`（最大化归零）；壳根、登录页根（`[data-app-radius]`）、窗口描边与 VT 快照底色层全部同源，组件内禁止再写 inline `borderRadius`。禁止另起一条 Rust 圆角链路：Win11 那圈约 8px 系统裁切已由 Rust setup 设 `DWMWCP_DONOTROUND` 关掉，曲线彻底归 CSS。
 - 主题落地时同步一次原生明暗 `lib/tauri.setWindowTheme(dark)`（仅 Windows，供 DWM 缩略图/Alt-Tab 着色；mac/linux 传明暗会污染 `prefers-color-scheme` 判定）。
 - 背景是页面级资产：每页自带 `<PageCanvas>`（衬层 bg-shell 壳色+噪点晕染、内容面半透壳色 76% + blur12 磨砂、左上内圆角、top-titlebar 让位标题栏带；点状 `.bg-dots` 仅登录页，流程页用 React Flow 自带 Background）。锚点由本模块自持（`CanvasAnchor` 组件 + 模块内槽位 + useSyncExternalStore，不用 context/ref 转发），AppShell 只在壳根摆出锚点节点（absolute inset-0 -z-10 全窗），画布 createPortal 铺满含标题栏带——Portal 是绕开 `contain:paint` 封锁的既定手段，行 contain 不变量勿动。
 - 内容面偏移是 JS 事实：`page-canvas.surfaceLeft(mode, desktop)` 返回 `var(--sidebar-width)`/`var(--sidebar-width-icon)`/`0px` 并直写 style，index.scss 只留过渡与着色；不再挂 `data-sidebar-mode`，也没有 CSS 侧的三态分支。
@@ -36,36 +37,36 @@ shadcn ui：
 - `dev/layer-inspector.ts` 必须零依赖（只用 DOM/CSSOM，不引 React、shadcn、本项目令牌），层级靠运行时 `getComputedStyle` 自动扫描（html、body 恒为最底两层）——新增自带背景的层无需登记；改它要保持「整文件拷进任意项目即可用」。
 - 移动抽屉例外：Sheet 保持 bg-sidebar 实底（透明规则仅限 ≥768px）。
 - 过渡伪层例外：`::view-transition` 兜底色仅存于主题切换 300ms（见"桌面窗口与主题切换"）。
-- 主窗口亚克力为**纯 CSS 近似**（不依赖 OS 材质）：`page-canvas-shell` 叠噪点(inline svg feTurbulence)+两处 `muted-foreground` 径向晕染；内容面 `--shell` 76% 半透 + `blur(12px)`（磨砂透出衬层纹理）；点状纹理不在此层（`.bg-dots` 仅登录页引用）；各平台一致渲染，无 Win/mac/Linux 差异。
+- 主窗口亚克力只做纯 CSS（各平台一致，不用系统材质——`windowEffects` 评估过已撤销，理由见 EXPERIENCES）：`page-canvas-shell` 实心 `--shell` + 噪点(inline svg feTurbulence) + 两处 `muted-foreground` 径向晕染；内容面 `--shell` 半透 + 自糊。
+  - 两个旋钮单源：`--glass-blur`（内容面自糊半径）、`--film-a`（内容面壳色不透明度 %，默认 76）；真值在 `store/ui.ts` 的个性化设置，由 `lib/glass-channel.publishGlass()` 发布到文档根。组件内禁止再写死 blur/alpha，也不许按平台分支改背景；衬层恒实心。默认档与上限（`*_DEFAULT`/`*_MAX`）连同 `resetPersonalize()` 都在 `store/ui.ts`，设置页滑杆不得再写字面数值。点状纹理不在此层（`.bg-dots` 仅登录页引用）。
 - 淡出线单源：横竖各一条 `--line-h`/`--line-v`（1px、两端 4% 全透明、色取 `--separator`），SCSS 与 TSX 一律引用变量，禁止再展开 gradient 字面量；拖拽线恒显不变色。
 - 标题栏带高度单源：`@theme --spacing-titlebar: 2.5rem` → `h-titlebar`/`top-titlebar`（壳根让位、内容面偏移、悬浮侧栏共用），新增让位处用该类，不再写 h-10/top-10/top-12。
 - 断点单源：`--breakpoint-md: 768px`（Tailwind `md:` 的实值）+ SCSS 媒体查询写 768px + `hooks/use-mobile.ts` 的 768，三处同值，改断点必须三处一起动（JS 与 CSS 无法共享变量，靠注释互指）。
 
 桌面窗口与主题切换：
-- 桌面端任何页面必须保留最小化/最大化/关闭三键：AppShell 之外的全屏路由（如登录页）需自带 WindowControls + 顶部拖动区 + useWindowState 圆角。
-- 主题切换动画只用 index.scss 的纯 CSS 方向规则（`vt-circle-in/out` + `--vt-x/y/r`，由 lib/theme-transition.ts 写参触发）；禁止改回「.ready 后 WAAPI animate」模式——过渡被跳过/拒绝时静默无动画。
-- View Transition 期间文档渲染被快照树替换，`::view-transition` 必须保留 `var(--shell)` 兜底底色，否则透明窗口直接透见桌面；该底色矩形还要 `border-radius: var(--app-radius)`（圆角通道由 lib/tauri `emitWindow` 单点写入），否则明暗切换的 300ms 里四角被填成尖角。
+- 桌面端任何页面必须保留最小化/最大化/关闭三键：AppShell 之外的全屏路由（如登录页）需自带 WindowControls + 顶部拖动区；圆角无需自管——`main.tsx` 挂的 WindowRadius 对全路由统一发布通道值。
+- 主题切换动画只用 index.scss 的纯 CSS 方向规则（`vt-circle-in/out` + `--vt-x/y/r`，由 lib/theme-transition.ts 写参触发）；禁止改回「.ready 后 WAAPI animate」模式——过渡被跳过/拒绝时静默无动画。切换一律走 `startThemeTransition({apply, rollback, x, y})`：事务模块负责失败回滚与无 VT 降级，调用方只描述「切到哪」和「怎么退回」，禁止自己调 `setTheme` 再另起过渡。
+- View Transition 期间文档渲染被快照树替换，`::view-transition` 必须保留 `var(--shell)` 兜底底色，否则透明窗口直接透见桌面；该底色矩形还要 `border-radius: var(--app-radius)`（圆角通道由 `lib/radius-channel` 单点写入），否则明暗切换的 300ms 里四角被填成尖角。
 - 窗口出场时机归本模块：`layout/window-reveal.tsx` 在首屏 useEffect 里发 `reveal_window`（还原+显示+聚焦全在 Rust 一侧做完）。禁止改用 rAF/`onload` 等帧信号触发——窗口启动即最小化，WebView2 停帧时 rAF 永不回调，窗口会卡在不显示。
-- 新增主题：在 html 层用类覆盖 CSS 变量（必须含 `--shell`），动画链路零改动即生效；切换必须在 `startThemeTransition` 的 flushSync 回调内同步落 html class，方向由目标是否带 `.dark` 决定。
+- 新增主题：在 html 层用类覆盖 CSS 变量（必须含 `--shell`），动画链路零改动即生效；html class 必须在 `startThemeTransition` 的回调内同步落，方向由目标是否带 `.dark` 决定。反馈分层：按钮图标/提示归调用方的乐观档（点击当帧生效），切换事务排到下一个任务——禁止在回调里 `flushSync` 整棵树（会把同步渲染压到快照捕获之前，更卡）。
 
 侧边栏：
 - 三态模式 `expanded/icon/hidden` 以 zustand（store/ui.ts）为唯一持久化源；`collapsibleFor/openFor/modeFromOpen` 三个纯函数是领域模式↔注册表二态的唯一翻译处（含 hidden 不被 provider 抹掉），组件里不得再各自写映射。Ctrl+B 与标题栏按钮共用 `cycleSidebarMode`。
 - 侧栏**常驻挂载**保证三态切换均有出入动画：`collapsible` 按模式取 `icon`/`offcanvas`（hidden=offcanvas 左滑出屏），provider `open` 仅在 expanded 为真；hidden 态容器加 `inert` 防离屏聚焦。勿改回条件卸载（会丢过渡）。
 - Ctrl+B 由 `shortcuts/sidebar-hotkey.ts` 普通监听接管三态；ui/sidebar.tsx 内置的两态热键已删，不要再加 `stopImmediatePropagation` 抢时序（移动端不拦截，走抽屉）。
-- 宽度单通道：`lib/sidebar-channel.publishWidth` 只写 `<html>`，侧栏/拖拽手柄/画布内容面/悬浮侧栏全部继承它；拖拽期间直写文档根，pointerup 才提交 store。禁止在 provider/锚点/组件上再 inline 重复变量。
-- hidden 态另挂左缘悬浮侧栏（sidebar-peek.tsx，官方非模态 Sheet + 复用 sidebar-body.tsx，`tooltip={false}` 抑制全宽态的重复提示），几何与磨砂在 index.scss 契约条目 5/6。
+- 宽度单通道：`lib/sidebar-channel.publishWidth` 只写 `<html>`，侧栏/拖拽手柄/画布内容面/悬浮侧栏全部继承它；可拖区间 `WIDTH_MIN`/`WIDTH_MAX` 也在该模块，拖拽钳制与 store 持久化收敛共用同一档。拖拽期间直写文档根，pointerup 才提交 store。禁止在 provider/锚点/组件上再 inline 重复变量。
+- hidden 态另挂左缘悬浮侧栏（sidebar-peek.tsx，官方非模态 Sheet + 复用 sidebar-body.tsx，`tooltip={false}` 抑制全宽态的重复提示），几何、磨砂与 1px `--edge` 极浅描边在 index.scss 契约条目 5/6，组件侧不再写 border 类。
 - ui/sidebar.tsx 的 CLI 手改例外共三处：删 cookie 写入、删内置 Ctrl+B、去掉 wrapper 的 inline `--sidebar-width(-icon)`；CLI 更新后会带回，需按 STRUCTURE.md 的 ui/ 例外行复原。
 - 行容器的 `[contain:paint]` 是 fixed 侧栏的包含块（侧栏始于标题栏之下、被壳圆角裁剪），不可移除；勿换成 transform（DPI 缩放下文字发虚）。
 
 目录规范：按职责独立成目录，互不越界。
 - `components/ui/`：shadcn CLI 生成的组件（勿手改，走 CLI 更新；已知例外见 STRUCTURE.md 的 ui/ 行）。
-- `components/layout/`：应用外壳布局（app-shell/page-canvas/icon-action/title-bar/sidebar-body/sidebar-nav/sidebar-user/sidebar-cycle-trigger/sidebar-peek/sidebar-resizer/window-*）。
+- `components/layout/`：应用外壳布局（app-shell/page-canvas/icon-action/title-bar/sidebar-body/sidebar-nav/sidebar-user/sidebar-cycle-trigger/sidebar-peek/sidebar-resizer/window-*（controls/drag-region/pin/radius/reveal））。
 - `components/*.tsx`：业务组件（如 theme-provider）。
 - `routes/`：路由表 `router.tsx` + 页面 `pages/`。
 - `store/`：zustand 持久化状态（ui/auth）。
 - `hooks/`：通用 React hooks。
-- `lib/`：`tauri/`（IPC 命令与事件常量表 + 窗口能力）、`backend.ts`（后端形态/地址/鉴权头单源）、`api.ts`·`chat.ts`（消费 backend）、`sidebar-channel.ts`（宽度通道）、`theme-transition.ts`。网络请求与令牌注入禁止在页面里各写一份。
+- `lib/`：`tauri/`（IPC 命令与事件常量表 + 窗口能力）、`backend.ts`（后端形态/地址/鉴权头单源）、`api.ts`·`chat.ts`（消费 backend）、`sidebar-channel.ts`（宽度通道）、`glass-channel.ts`（磨砂旋钮通道）、`radius-channel.ts`（四角圆角通道）、`storage.ts`（持久化键登记 + 容错读写单源）、`theme-transition.ts`。网络请求与令牌注入、localStorage 键名禁止在页面里各写一份。
 - `shortcuts/`：`registry.ts` 是快捷键唯一来源（combo 结构 + 类别 + 生效端；`comboText/entryText` 派生展示、`comboMatches` 供匹配），`webview.ts` 按清单安装 block/hotkey，`sidebar-hotkey.ts` 只挂三态循环。新增热键/拦截必须进清单，否则设置页漏项。主题切换无热键，仅菜单触发。
-- `lib/`：领域封装（`tauri/` 桌面能力、`api.ts` 后端客户端、`chat.ts` AI 传输、`theme-transition.ts` 主题过渡、`utils.ts`）。
 - `styles/`：额外全局样式（typeset.scss）。
 架构边界（eslint 强制）：Tauri IPC 仅在 `lib/tauri/`；Eden 仅在 `lib/api.ts`；fetch 仅在 `lib/chat.ts`（AI SDK transport 注入鉴权头）；其余代码禁止裸 `fetch`。

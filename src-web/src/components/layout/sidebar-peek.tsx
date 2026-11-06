@@ -40,14 +40,13 @@ export function SidebarPeek() {
         onMouseEnter={reveal}
         onMouseLeave={scheduleHide}
       />
-      {/* 悬浮面板：官方 Sheet 侧栏档；top-12 让位 40px 标题栏带，磨砂背景由 index.scss 的 sidebar-peek 规则提供 */}
-      {/* 悬浮面板：官方非模态 Sheet；定位/宽度/磨砂统一由 index.scss 的 sidebar-peek 规则给
+      {/* 悬浮面板：官方非模态 Sheet；定位/宽度/磨砂/描边统一由 index.scss 的 sidebar-peek 契约条目给
           （Sheet 走 body Portal，位置以全窗为基准，故需让位标题栏带） */}
       <SheetContent
         data-slot="sidebar-peek"
         side="left"
         showCloseButton={false}
-        className="gap-0 overflow-hidden rounded-xl border-0 p-0 shadow-2xl"
+        className="gap-0 overflow-hidden rounded-xl p-0 shadow-2xl"
         onMouseEnter={reveal}
         onMouseLeave={scheduleHide}
       >

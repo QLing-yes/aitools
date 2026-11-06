@@ -5,7 +5,7 @@ mod sidecar;
 #[cfg(not(debug_assertions))]
 mod sidecar_terminal_log;
 
-use state::{CornerState, SidecarReady, SidecarToken, WindowCorners};
+use state::{SidecarReady, SidecarToken};
 use tauri::Manager;
 
 #[cfg(not(debug_assertions))]
@@ -45,7 +45,6 @@ pub fn run() {
         }))
         .manage(SidecarToken(token))
         .manage(SidecarReady::default())
-        .manage(CornerState(std::sync::Mutex::new(WindowCorners::default())))
         .setup(|app| {
             #[cfg(not(debug_assertions))]
             sidecar::spawn_bun_sidecar(app);
@@ -60,12 +59,14 @@ pub fn run() {
                 // （贴靠布局浮层需 web 自绘按钮申报 HTMAXBUTTON，稳定版 WebView2 无此通道，等 WCO 转正）
                 #[cfg(target_os = "windows")]
                 {
-                    // 去除 Win11 对无装饰窗口默认的 1px DWM 边框线（DWMWA_COLOR_NONE）；
-                    // conf 已关 shadow（无 OS 阴影、无 tao 预留的顶部非客户区），窗口描边全归 web
+                    // 去除 Win11 对无装饰窗口默认的 1px DWM 边框线（DWMWA_COLOR_NONE），并要
+                    // DWMWCP_DONOTROUND 关掉系统那圈约 8px 的圆角裁切——conf 已关 shadow（无 OS 阴影、
+                    // 无 tao 顶部非客户区），描边与四角曲线全归 web（半径由个性化设置持久化）
                     if let Ok(hwnd) = window.hwnd() {
                         use windows::Win32::Foundation::HWND;
                         use windows::Win32::Graphics::Dwm::{
-                            DwmSetWindowAttribute, DWMWA_BORDER_COLOR,
+                            DWMWA_BORDER_COLOR, DWMWA_WINDOW_CORNER_PREFERENCE,
+                            DWMWCP_DONOTROUND, DwmSetWindowAttribute,
                         };
                         const BORDER_NONE: u32 = 0xFFFF_FFFE;
                         let raw = HWND(hwnd.0 as *mut core::ffi::c_void);
@@ -75,6 +76,12 @@ pub fn run() {
                                 DWMWA_BORDER_COLOR,
                                 &BORDER_NONE as *const u32 as *const core::ffi::c_void,
                                 core::mem::size_of::<u32>() as u32,
+                            );
+                            let _ = DwmSetWindowAttribute(
+                                raw,
+                                DWMWA_WINDOW_CORNER_PREFERENCE,
+                                &DWMWCP_DONOTROUND as *const _ as *const core::ffi::c_void,
+                                core::mem::size_of_val(&DWMWCP_DONOTROUND) as u32,
                             );
                         }
                     }
@@ -108,9 +115,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             commands::sidecar_token,
             commands::reveal_window,
-            commands::shell_platform,
-            commands::set_window_corners,
-            commands::get_window_corners
+            commands::shell_platform
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

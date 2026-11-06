@@ -25,9 +25,11 @@
 | 标题栏带 | 自绘标题栏占住的那 2.5rem 高度 | `@theme --spacing-titlebar` |
 | 侧栏三态 | expanded / icon / hidden | `store/ui.ts`；到注册表二态的翻译也在这里 |
 | 宽度通道 | 发布到文档根的 `--sidebar-width(-icon)`，侧栏/画布/悬浮侧栏共同继承 | `lib/sidebar-channel.ts` |
-| 圆角通道 | 文档根 `--app-radius`：壳根、登录页根（挂 `[data-app-radius]`）与 VT 快照底色层同源，最大化归零 | `lib/tauri` 写通道；兜底值在 index.scss |
+| 圆角通道 | 文档根 `--app-radius`：壳根、登录页根（挂 `[data-app-radius]`）、窗口描边与 VT 快照底色层同源，最大化归零 | 值在 `store/ui.ts` 的 `corners`；写通道在 `lib/radius-channel.ts`，合成器 `layout/window-radius.tsx`；兜底值在 index.scss |
 | 窗口描边 | OS 边框/阴影关闭后由 web 自绘的 1px 窗缘浅线（仅桌面渲染） | index.scss `[data-app-edge]` + `--edge` |
+| 个性化磨砂 | 内容面自糊半径 + 壳色不透明度两个可调量（`--glass-blur`/`--film-a`）；系统材质已撤销不用 | `store/ui.ts` ↔ `lib/glass-channel.ts` ↔ index.scss 契约条目 3 |
 | 出场（reveal） | 启动不占屏（Windows 最小化，其余保持隐藏），web 首屏提交后还原+显示+聚焦 | `commands::reveal_window` ↔ `components/layout/window-reveal.tsx`；动作在 lib.rs `present_window` |
 | 淡出线 | 1px、两端 4% 全透明的分割线（含两条可拖线），恒显不变色 | `--line-h` / `--line-v` |
 | 覆写契约 | 本仓压过 shadcn/Base UI 内部实现的 13 条层外规则 | index.scss「注册表覆写契约」一节 |
 | 快捷键清单 | 键位、展示串、生效端、行为的唯一来源 | `shortcuts/registry.ts` |
+| 持久化登记 | 全部 localStorage 落点的唯一清单（store 键、明暗偏好、分栏布局 id、检视器位置）；键值发布后不可改 | `lib/storage.ts` `STORAGE_KEYS` |

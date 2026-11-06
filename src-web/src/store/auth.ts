@@ -3,6 +3,8 @@
 import { create } from "zustand"
 import { persist } from "zustand/middleware"
 
+import { STORAGE_KEYS } from "@/lib/storage"
+
 /** 持久化的鉴权状态字段与行为 */
 interface AuthState {
   /** 已登录用户名；null = 未登录 */
@@ -13,6 +15,13 @@ interface AuthState {
   logout: () => void
 }
 
+/** 把持久化载荷读成合法登录态：非字符串用户名一律按未登录处理（下游直接取其首字符展示）
+ * @param persisted 存储载荷 @returns username 字段 */
+function readAuthData(persisted: unknown): { username: string | null } {
+  const name = (persisted as Partial<AuthState> | null | undefined)?.username
+  return { username: typeof name === "string" ? name : null }
+}
+
 /** 全局鉴权 store；仅 username 序列化到 localStorage（函数值自动跳过） */
 export const useAuthStore = create<AuthState>()(
   persist(
@@ -21,6 +30,10 @@ export const useAuthStore = create<AuthState>()(
       login: (username) => set({ username }),
       logout: () => set({ username: null }),
     }),
-    { name: "aitools-auth" }
+    {
+      name: STORAGE_KEYS.auth,
+      // 每次加载都收敛一遍，挡住手改存储塞进来的非字符串
+      merge: (persisted, current) => ({ ...current, ...readAuthData(persisted) }),
+    }
   )
 )

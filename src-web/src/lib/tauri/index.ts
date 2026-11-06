@@ -16,13 +16,10 @@ export const IPC = {
   sidecarToken: "sidecar_token",
   revealWindow: "reveal_window",
   shellPlatform: "shell_platform",
-  setWindowCorners: "set_window_corners",
-  getWindowCorners: "get_window_corners",
 } as const
 
 /** Rust `emit` 的事件名 */
 export const IPC_EVENT = {
-  cornersChanged: "window-corners-changed",
   sidecarTerminated: "sidecar-terminated",
 } as const
 
@@ -88,60 +85,6 @@ export function setWindowTheme(dark: boolean): void {
   void appWindow?.setTheme(dark ? "dark" : "light").catch(() => {})
 }
 
-// --------------------------------- 窗口圆角 ---------------------------------
-
-/** 窗口四角圆角（px），对应上左、上右、下右、下左 */
-export interface WindowCorners {
-  topLeft: number
-  topRight: number
-  bottomRight: number
-  bottomLeft: number
-}
-
-/** 默认圆角，与 Rust 端 WindowCorners::default 一致 */
-const defaultCorners: WindowCorners = {
-  topLeft: 5,
-  topRight: 5,
-  bottomRight: 5,
-  bottomLeft: 5,
-}
-
-/** 设置窗口四角圆角（浏览器降级 no-op）
- * @param topLeft 左上角 px
- * @param topRight 右上角 px
- * @param bottomRight 右下角 px
- * @param bottomLeft 左下角 px
- */
-export async function setWindowCorners(
-  topLeft: number,
-  topRight: number,
-  bottomRight: number,
-  bottomLeft: number
-): Promise<void> {
-  if (!isTauri) return
-  await invoke(IPC.setWindowCorners, { topLeft, topRight, bottomRight, bottomLeft })
-}
-
-/** 获取当前窗口四角圆角（浏览器返回默认值）
- * @returns 四角圆角对象
- */
-export async function getWindowCorners(): Promise<WindowCorners> {
-  return isTauri ? invoke(IPC.getWindowCorners) : defaultCorners
-}
-
-/** 监听窗口圆角变化（浏览器返回空取消函数）
- * @param callback 圆角变化回调
- * @returns 取消监听函数
- */
-export function onWindowCornersChange(
-  callback: (corners: WindowCorners) => void
-): Promise<() => void> {
-  if (!isTauri) return Promise.resolve(() => {})
-  return listen<WindowCorners>(IPC_EVENT.cornersChanged, (event) =>
-    callback(event.payload)
-  )
-}
-
 // --------------------------------- sidecar 令牌 ---------------------------------
 
 /** 令牌缓存：仅缓存非空结果（Rust 在 sidecar 就绪后才下发，过早问到的空值不固化） */
@@ -183,55 +126,31 @@ export function onSidecarTerminated(
   })
 }
 
-/** 窗口状态：最大化标志 + 四角圆角（border-radius 走 `--app-radius` 通道，不再派生串） */
+/** 窗口状态：仅最大化标志（四角半径归 store + 圆角通道，不在这里掺和） */
 export interface WindowState {
   /** 是否最大化 */
   isMaximized: boolean
-  /** 四角圆角 */
-  corners: WindowCorners
 }
 
 /** 全局唯一快照（不可变对象，变更时整体替换） */
-let windowSnapshot: WindowSnapshot = { isMaximized: false, corners: defaultCorners }
+let windowSnapshot: WindowState = { isMaximized: false }
 const windowListeners = new Set<() => void>()
 /** 是否已建立全局订阅（仅 Tauri 环境） */
 let windowSubscribed = false
 
-/** 窗口状态原始快照（不含派生 radius） */
-interface WindowSnapshot {
-  /** 是否最大化 */
-  isMaximized: boolean
-  /** 四角圆角 */
-  corners: WindowCorners
-}
-
-/** 圆角通道：壳根与 ::view-transition 快照底色层共用，单点写入防两处漂移 */
-const RADIUS_VAR = "--app-radius"
-
-/** border-radius 串：最大化归零（避免遮挡任务栏），其余四角拼接 */
-function radiusOf(snap: WindowSnapshot): string {
-  return snap.isMaximized
-    ? "0"
-    : `${snap.corners.topLeft}px ${snap.corners.topRight}px ${snap.corners.bottomRight}px ${snap.corners.bottomLeft}px`
-}
-
-function emitWindow(next: WindowSnapshot) {
+function emitWindow(next: WindowState) {
   windowSnapshot = next
-  document.documentElement.style.setProperty(RADIUS_VAR, radiusOf(next))
   windowListeners.forEach((l) => l())
 }
 
-/** 首次消费时建立全局订阅：初始同步 + resize 最大化探测 + 圆角广播 */
+/** 首次消费时建立全局订阅：初始同步 + resize 最大化探测 */
 function ensureWindowSubscription(): void {
   if (windowSubscribed || !appWindow) return
   windowSubscribed = true
   const win = appWindow
   win
     .isMaximized()
-    .then((v) => emitWindow({ ...windowSnapshot, isMaximized: v }))
-    .catch(() => {})
-  getWindowCorners()
-    .then((c) => emitWindow({ ...windowSnapshot, corners: c }))
+    .then((v) => emitWindow({ isMaximized: v }))
     .catch(() => {})
   // 事件回调不被 await：内部自吞异常，IPC 失败跳过本次同步，下次 resize 再覆盖
   win
@@ -239,16 +158,12 @@ function ensureWindowSubscription(): void {
       try {
         const v = await win.isMaximized()
         // 值未变化跳过广播：拖窗期间 resize 高频，避免无谓 re-render
-        if (v !== windowSnapshot.isMaximized)
-          emitWindow({ ...windowSnapshot, isMaximized: v })
+        if (v !== windowSnapshot.isMaximized) emitWindow({ isMaximized: v })
       } catch {
         /* 忽略：窗口销毁竞态等场景 */
       }
     })
     .catch(() => {})
-  onWindowCornersChange((c) => emitWindow({ ...windowSnapshot, corners: c })).catch(
-    () => {},
-  )
 }
 
 function subscribeWindow(cb: () => void): () => void {

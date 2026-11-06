@@ -1,9 +1,10 @@
-// 侧栏底部用户区：头像+用户名+设置icon；点击弹出操作菜单（登录态、设置、明暗切换）
+// 侧栏底部用户区：头像+用户名+设置icon；点击弹出操作菜单（明暗切换、个性化、设置、登录/退出）
 
 import {
   ContrastIcon,
   LogInIcon,
   LogOutIcon,
+  PaletteIcon,
   SettingsIcon,
   UserIcon,
 } from "lucide-react"
@@ -31,15 +32,22 @@ const MENU_CLOSE_MS = 120
 
 export function SidebarUser() {
   const navigate = useNavigate()
-  const { toggleTheme } = useTheme()
+  const { theme, toggleTheme, setTheme } = useTheme()
   const username = useAuthStore((s) => s.username)
   const logout = useAuthStore((s) => s.logout)
 
-  /** 明暗切换：圆形揭示动画，起点为点击点 */
+  /** 明暗切换：等菜单消失再启动过渡；提交半途失败回滚到切换前的模式 */
   const toggleWithTransition = (e: React.MouseEvent) => {
     const { clientX, clientY } = e
+    const current = theme
     window.setTimeout(
-      () => startThemeTransition(toggleTheme, clientX, clientY),
+      () =>
+        startThemeTransition({
+          apply: toggleTheme,
+          rollback: () => setTheme(current),
+          x: clientX,
+          y: clientY,
+        }),
       MENU_CLOSE_MS
     )
   }
@@ -76,6 +84,12 @@ export function SidebarUser() {
               <DropdownMenuItem onClick={toggleWithTransition}>
                 <ContrastIcon className="size-4 shrink-0" />
                 明暗切换
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => navigate("/settings?section=personalize")}
+              >
+                <PaletteIcon className="size-4 shrink-0" />
+                个性化
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => navigate("/settings")}>
                 <SettingsIcon className="size-4 shrink-0" />

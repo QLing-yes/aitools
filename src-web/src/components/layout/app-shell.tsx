@@ -11,6 +11,7 @@ import { TitleBar } from "@/components/layout/title-bar"
 import { Sidebar, SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { TooltipProvider } from "@/components/ui/tooltip"
+import { publishGlass } from "@/lib/glass-channel"
 import { publishWidth } from "@/lib/sidebar-channel"
 import { isTauri } from "@/lib/tauri"
 import { useSidebarHotkey } from "@/shortcuts/sidebar-hotkey"
@@ -29,9 +30,14 @@ export function AppShell() {
   const setSidebarMode = useUiStore((s) => s.setSidebarMode)
   /** 侧栏展开宽度（px，拖拽调节，zustand persist） */
   const sidebarWidth = useUiStore((s) => s.sidebarWidth)
+  /** 个性化两项（持久化）：内容面自糊半径与壳色不透明度 */
+  const glassBlur = useUiStore((s) => s.glassBlur)
+  const glassFilm = useUiStore((s) => s.glassFilm)
 
   // 宽度通道：store 变更即发布到文档根（useLayoutEffect 抢在绘制前，避免首帧按 :root 兜底值闪一下）
   useLayoutEffect(() => publishWidth(sidebarWidth), [sidebarWidth])
+  // 磨砂通道：同上，两个旋钮只改 CSS
+  useLayoutEffect(() => publishGlass(glassBlur, glassFilm), [glassBlur, glassFilm])
 
   return (
     <TooltipProvider>

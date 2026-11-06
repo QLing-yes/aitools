@@ -7,6 +7,11 @@ export const WIDTH_VAR = "--sidebar-width"
 /** 图标折叠宽 CSS 变量名（与 index.scss :root 默认值同源） */
 export const ICON_VAR = "--sidebar-width-icon"
 
+/** 展开宽可拖区间下限（px，拖拽钳制与持久化收敛共用同一档） */
+export const WIDTH_MIN = 160
+/** 展开宽可拖区间上限（px） */
+export const WIDTH_MAX = 480
+
 /** 把展开宽写入文档根 @param px 像素宽度 */
 export function publishWidth(px: number): void {
   document.documentElement.style.setProperty(WIDTH_VAR, `${px}px`)

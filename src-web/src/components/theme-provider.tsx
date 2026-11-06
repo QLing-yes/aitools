@@ -1,5 +1,6 @@
 import * as React from "react"
 
+import { readText, STORAGE_KEYS, writeText } from "@/lib/storage"
 import { setWindowTheme } from "@/lib/tauri"
 
 export type Theme = "dark" | "light" | "system"
@@ -8,6 +9,7 @@ type ResolvedTheme = "dark" | "light"
 type ThemeProviderProps = {
   children: React.ReactNode
   defaultTheme?: Theme
+  /** 明暗偏好的存储键 */
   storageKey?: string
   disableTransitionOnChange?: boolean
 }
@@ -66,12 +68,12 @@ function disableTransitionsTemporarily() {
 export function ThemeProvider({
   children,
   defaultTheme = "light",
-  storageKey = "theme",
+  storageKey = STORAGE_KEYS.theme,
   disableTransitionOnChange = true,
   ...props
 }: ThemeProviderProps) {
   const [theme, setThemeState] = React.useState<Theme>(() => {
-    const storedTheme = localStorage.getItem(storageKey)
+    const storedTheme = readText(storageKey)
     if (isTheme(storedTheme)) {
       return storedTheme
     }
@@ -109,8 +111,8 @@ export function ThemeProvider({
 
   const setTheme = React.useCallback(
     (nextTheme: Theme) => {
-      localStorage.setItem(storageKey, nextTheme)
-      // 同步落 class：View Transition 回调无需等 React 提交即可截到新快照
+      writeText(storageKey, nextTheme)
+      // class 必须在回调内同步落：新快照在本次回调返回后才捕获
       applyTheme(nextTheme)
       setThemeState(nextTheme)
     },

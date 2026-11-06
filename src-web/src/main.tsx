@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client"
 import { RouterProvider } from "react-router"
 
 import "./index.scss"
+import { WindowRadius } from "@/components/layout/window-radius.tsx"
 import { WindowReveal } from "@/components/layout/window-reveal.tsx"
 import { ThemeProvider } from "@/components/theme-provider.tsx"
 import { mountLayerInspector } from "@/dev/layer-inspector.ts"
@@ -22,6 +23,8 @@ createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <ThemeProvider>
       <RouterProvider router={router} />
+      {/* 圆角通道：登录页与主壳共用一份持久化半径 */}
+      <WindowRadius />
       {/* 首屏提交后才让窗口出场（启动阶段窗口保持最小化） */}
       <WindowReveal />
     </ThemeProvider>

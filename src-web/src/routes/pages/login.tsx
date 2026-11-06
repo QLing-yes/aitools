@@ -1,9 +1,11 @@
 // 登录页（login-03 风格）：用户名+密码表单；校验预留，任意凭据直接通过
 
+import { ArrowLeftIcon } from "lucide-react"
 import { useState } from "react"
 import { useNavigate } from "react-router"
 
 import { BrandLogo } from "@/components/brand-logo"
+import { IconAction } from "@/components/layout/icon-action"
 import { ThemeMenu } from "@/components/layout/theme-menu"
 import { WindowControls } from "@/components/layout/window-controls"
 import { WindowDragRegion } from "@/components/layout/window-drag-region"
@@ -24,6 +26,7 @@ import {
 } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import { TooltipProvider } from "@/components/ui/tooltip"
+import { useHistoryNav } from "@/hooks/use-history-nav"
 import { isTauri } from "@/lib/tauri"
 import { useAuthStore } from "@/store/auth"
 
@@ -39,6 +42,24 @@ function validate(username: string, password: string): FormErrors {
   if (!password) errors.password = "请输入密码"
   else if (password.length < 6) errors.password = "密码至少 6 位"
   return errors
+}
+
+/** 返回入口：能后退就后退（回到退出登录前的页面），直达登录页时兜底进主界面 */
+function LoginBackButton() {
+  const navigate = useNavigate()
+  const { canGoBack } = useHistoryNav()
+
+  return (
+    <IconAction
+      hint={canGoBack ? "返回上一页" : "进入主界面"}
+      button={{
+        onClick: () =>
+          canGoBack ? navigate(-1) : navigate("/", { replace: true }),
+      }}
+    >
+      <ArrowLeftIcon className="size-4 shrink-0" />
+    </IconAction>
+  )
 }
 
 export function LoginPage() {
@@ -68,9 +89,13 @@ export function LoginPage() {
         data-app-radius
         className="bg-shell bg-dots relative flex min-h-svh flex-col items-center justify-center gap-6 overflow-hidden p-6 pt-12 md:p-10"
       >
-        {/* 桌面端：顶部拖动区 + 主题菜单 + 窗口三键；浏览器：右上角悬浮主题入口 */}
+        {/* 桌面端：返回 + 顶部拖动区 + 主题菜单 + 窗口三键；浏览器：左上返回、右上悬浮主题入口 */}
         {isTauri ? (
           <div className="fixed inset-x-0 top-0 flex h-10 select-none">
+            {/* 左上：返回入口（no-drag 保持可点击） */}
+            <div className="flex items-center gap-0.5 pl-2 [-webkit-app-region:no-drag]">
+              <LoginBackButton />
+            </div>
             <WindowDragRegion />
             <div className="flex items-center gap-0.5 pr-2 [-webkit-app-region:no-drag]">
               <ThemeMenu />
@@ -79,9 +104,14 @@ export function LoginPage() {
             </div>
           </div>
         ) : (
-          <div className="fixed top-1.5 right-2 [-webkit-app-region:no-drag]">
-            <ThemeMenu />
-          </div>
+          <>
+            <div className="fixed top-1.5 left-2 [-webkit-app-region:no-drag]">
+              <LoginBackButton />
+            </div>
+            <div className="fixed top-1.5 right-2 [-webkit-app-region:no-drag]">
+              <ThemeMenu />
+            </div>
+          </>
         )}
 
         <div className="relative flex w-full max-w-sm flex-col gap-6">
