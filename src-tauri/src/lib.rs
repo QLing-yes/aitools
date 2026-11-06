@@ -5,11 +5,18 @@ mod sidecar;
 #[cfg(not(debug_assertions))]
 mod sidecar_terminal_log;
 
-use state::{CornerState, SidecarToken, WindowCorners};
+use state::{CornerState, SidecarReady, SidecarToken, WindowCorners};
 use tauri::Manager;
 
 #[cfg(not(debug_assertions))]
 use rand::distr::{Alphanumeric, SampleString};
+
+/// 窗口就位三件套：还原最小化 → 显示 → 取焦（幂等，供就绪信号、二次启动与超时兜底共用）
+pub(crate) fn present_window(window: &tauri::WebviewWindow) {
+    let _ = window.unminimize();
+    let _ = window.show();
+    let _ = window.set_focus();
+}
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -31,27 +38,30 @@ pub fn run() {
                 .build(),
         )
         .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
-            // 聚焦已有窗口
+            // 二次启动：把已有窗口还原到前台并聚焦
             if let Some(window) = app.get_webview_window("main") {
-                let _ = window.unminimize();
-                let _ = window.set_focus();
+                present_window(&window);
             }
         }))
         .manage(SidecarToken(token))
+        .manage(SidecarReady::default())
         .manage(CornerState(std::sync::Mutex::new(WindowCorners::default())))
         .setup(|app| {
             #[cfg(not(debug_assertions))]
             sidecar::spawn_bun_sidecar(app);
 
-            // 防隐藏兜底：前端挂载后应调用 show()；超时仍未显示则强制显示，避免窗口永远不可见
+            // 启动不占屏：Windows 先最小化（任务栏就位、不上屏），web 就绪后经 reveal_window 还原聚焦；
+            // mac/Linux 对未可见窗口做 miniaturize 行为不确定，维持「隐藏到就绪」达到同样效果
             if let Some(window) = app.get_webview_window("main") {
+                #[cfg(target_os = "windows")]
+                let _ = window.minimize();
                 // Windows: 开启 WebView2 非客户区支持（ICoreWebView2Settings9）——
                 // -webkit-app-region: drag 区域由系统接管：触摸/鼠标拖窗、双击最大化原生可用
                 // （贴靠布局浮层需 web 自绘按钮申报 HTMAXBUTTON，稳定版 WebView2 无此通道，等 WCO 转正）
                 #[cfg(target_os = "windows")]
                 {
                     // 去除 Win11 对无装饰窗口默认的 1px DWM 边框线（DWMWA_COLOR_NONE）；
-                    // 窗口阴影为 OS 固定样式（仅 conf 开关，无强度参数），保持现状
+                    // conf 已关 shadow（无 OS 阴影、无 tao 预留的顶部非客户区），窗口描边全归 web
                     if let Ok(hwnd) = window.hwnd() {
                         use windows::Win32::Foundation::HWND;
                         use windows::Win32::Graphics::Dwm::{
@@ -84,10 +94,12 @@ pub fn run() {
 
                 std::thread::spawn(move || {
                     std::thread::sleep(std::time::Duration::from_secs(5));
+                    // 前端没交出就绪信号（白屏/卡加载）时兜底上屏
+                    let stuck = matches!(window.is_visible(), Ok(false))
+                        || matches!(window.is_minimized(), Ok(true));
                     // release 无控制台不打日志：兜底本身自愈，强显成功即恢复
-                    if matches!(window.is_visible(), Ok(false)) {
-                        let _ = window.show();
-                        let _ = window.set_focus();
+                    if stuck {
+                        present_window(&window);
                     }
                 });
             }
@@ -95,6 +107,8 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             commands::sidecar_token,
+            commands::reveal_window,
+            commands::shell_platform,
             commands::set_window_corners,
             commands::get_window_corners
         ])

@@ -9,11 +9,29 @@ export const isTauri = "__TAURI_INTERNALS__" in window
 /** 当前窗口句柄（仅 Tauri 环境创建，避免浏览器触发 IPC） */
 const appWindow = isTauri ? getCurrentWindow() : null
 
+// --------------------------------- IPC 契约 ---------------------------------
+
+/** Rust `generate_handler!` 注册的命令名（web 侧唯一出处；scripts/check_ipc.ts 比对三端一致性） */
+export const IPC = {
+  sidecarToken: "sidecar_token",
+  revealWindow: "reveal_window",
+  shellPlatform: "shell_platform",
+  setWindowCorners: "set_window_corners",
+  getWindowCorners: "get_window_corners",
+} as const
+
+/** Rust `emit` 的事件名 */
+export const IPC_EVENT = {
+  cornersChanged: "window-corners-changed",
+  sidecarTerminated: "sidecar-terminated",
+} as const
+
 // --------------------------------- 窗口操作 ---------------------------------
 
-/** 显示窗口（页面挂载完成后调用，避免白屏闪烁；浏览器降级 no-op） */
-export async function showWindow(): Promise<void> {
-  await appWindow?.show()
+/** web 首帧提交后的就绪信号：由 Rust 一次性完成还原最小化、显示、聚焦（浏览器 no-op） */
+export async function revealWindow(): Promise<void> {
+  if (!isTauri) return
+  await invoke(IPC.revealWindow)
 }
 
 /** 最小化窗口（浏览器降级 no-op） */
@@ -48,6 +66,28 @@ export async function isAlwaysOnTop(): Promise<boolean> {
   return appWindow ? appWindow.isAlwaysOnTop() : Promise.resolve(false)
 }
 
+/** DWM 着色（任务栏缩略图/Alt-Tab 框）只在 Windows 有意义；mac/linux 传原生明暗会改写 prefers-color-scheme，故只在 Windows 动手 */
+let isWindowsShell = isTauri && /Windows/i.test(navigator.userAgent)
+
+// 平台真源是 Rust cfg（UA 只兜到首帧解析回来之前）；纠正后按当前 class 补同步一次
+if (isTauri) {
+  invoke<string>(IPC.shellPlatform)
+    .then((os) => {
+      const windows = os === "windows"
+      if (windows === isWindowsShell) return
+      isWindowsShell = windows
+      if (windows) setWindowTheme(document.documentElement.classList.contains("dark"))
+    })
+    .catch(() => {})
+}
+
+/** 同步窗口原生明暗（非 Windows / 浏览器为 no-op）
+ * @param dark 是否深色 */
+export function setWindowTheme(dark: boolean): void {
+  if (!isWindowsShell) return
+  void appWindow?.setTheme(dark ? "dark" : "light").catch(() => {})
+}
+
 // --------------------------------- 窗口圆角 ---------------------------------
 
 /** 窗口四角圆角（px），对应上左、上右、下右、下左 */
@@ -79,14 +119,14 @@ export async function setWindowCorners(
   bottomLeft: number
 ): Promise<void> {
   if (!isTauri) return
-  await invoke("set_window_corners", { topLeft, topRight, bottomRight, bottomLeft })
+  await invoke(IPC.setWindowCorners, { topLeft, topRight, bottomRight, bottomLeft })
 }
 
 /** 获取当前窗口四角圆角（浏览器返回默认值）
  * @returns 四角圆角对象
  */
 export async function getWindowCorners(): Promise<WindowCorners> {
-  return isTauri ? invoke("get_window_corners") : defaultCorners
+  return isTauri ? invoke(IPC.getWindowCorners) : defaultCorners
 }
 
 /** 监听窗口圆角变化（浏览器返回空取消函数）
@@ -97,24 +137,35 @@ export function onWindowCornersChange(
   callback: (corners: WindowCorners) => void
 ): Promise<() => void> {
   if (!isTauri) return Promise.resolve(() => {})
-  return listen<WindowCorners>("window-corners-changed", (event) => callback(event.payload))
+  return listen<WindowCorners>(IPC_EVENT.cornersChanged, (event) =>
+    callback(event.payload)
+  )
 }
 
 // --------------------------------- sidecar 令牌 ---------------------------------
 
-/** 令牌缓存（仅首次 invoke） */
+/** 令牌缓存：仅缓存非空结果（Rust 在 sidecar 就绪后才下发，过早问到的空值不固化） */
 let tokenPromise: Promise<string> | null = null
 
-/** 获取 sidecar 访问令牌（结果缓存；浏览器环境降级为空串）
- * @returns 令牌；开发模式或浏览器环境为空串
- */
+/** 丢弃令牌缓存（sidecar 退出时调用，下次请求会重新问一次） */
+function resetTokenCache(): void {
+  tokenPromise = null
+}
+
+/** 获取 sidecar 访问令牌（浏览器/开发模式恒为空串）
+ * @returns 令牌；空串表示本地 sidecar 未就绪或不在桌面端 */
 export function sidecarToken(): Promise<string> {
-  return (tokenPromise ??= isTauri
-    ? invoke<string>("sidecar_token").catch((e) => {
-        console.warn("[tauri] sidecar_token 获取失败，降级为空串:", e)
-        return ""
-      })
-    : Promise.resolve(""))
+  if (!isTauri) return Promise.resolve("")
+  return (tokenPromise ??= invoke<string>(IPC.sidecarToken)
+    .then((t) => {
+      if (!t) resetTokenCache()
+      return t
+    })
+    .catch((e) => {
+      console.warn("[tauri] sidecar_token 获取失败，降级为空串:", e)
+      resetTokenCache()
+      return ""
+    }))
 }
 
 // --------------------------------- 窗口状态 ---------------------------------
@@ -126,22 +177,19 @@ export function onSidecarTerminated(
   callback: (code: number | null) => void
 ): Promise<() => void> {
   if (!isTauri) return Promise.resolve(() => {})
-  return listen<number | null>("sidecar-terminated", (e) => callback(e.payload))
+  return listen<number | null>(IPC_EVENT.sidecarTerminated, (e) => {
+    resetTokenCache()
+    callback(e.payload)
+  })
 }
 
-/** 窗口状态：最大化标志 + 四角圆角 + CSS border-radius 串 */
+/** 窗口状态：最大化标志 + 四角圆角（border-radius 走 `--app-radius` 通道，不再派生串） */
 export interface WindowState {
   /** 是否最大化 */
   isMaximized: boolean
   /** 四角圆角 */
   corners: WindowCorners
-  /** 直接可用的 border-radius：最大化时为 0（避免遮挡任务栏），否则四角拼接 */
-  radius: string
 }
-
-/** 订阅窗口状态（模块级单源：全应用一条 IPC/事件链，useSyncExternalStore 共享快照）
- * @returns 当前窗口状态
- */
 
 /** 全局唯一快照（不可变对象，变更时整体替换） */
 let windowSnapshot: WindowSnapshot = { isMaximized: false, corners: defaultCorners }
@@ -157,8 +205,19 @@ interface WindowSnapshot {
   corners: WindowCorners
 }
 
+/** 圆角通道：壳根与 ::view-transition 快照底色层共用，单点写入防两处漂移 */
+const RADIUS_VAR = "--app-radius"
+
+/** border-radius 串：最大化归零（避免遮挡任务栏），其余四角拼接 */
+function radiusOf(snap: WindowSnapshot): string {
+  return snap.isMaximized
+    ? "0"
+    : `${snap.corners.topLeft}px ${snap.corners.topRight}px ${snap.corners.bottomRight}px ${snap.corners.bottomLeft}px`
+}
+
 function emitWindow(next: WindowSnapshot) {
   windowSnapshot = next
+  document.documentElement.style.setProperty(RADIUS_VAR, radiusOf(next))
   windowListeners.forEach((l) => l())
 }
 
@@ -198,11 +257,8 @@ function subscribeWindow(cb: () => void): () => void {
   return () => windowListeners.delete(cb)
 }
 
+/** 订阅窗口状态（模块级单源：全应用一条 IPC/事件链，useSyncExternalStore 共享快照）
+ * @returns 当前窗口状态 */
 export function useWindowState(): WindowState {
-  const snap = useSyncExternalStore(subscribeWindow, () => windowSnapshot)
-  /** border-radius 串：最大化归零，其余四角拼接（浏览器恒为默认圆角） */
-  const radius = snap.isMaximized
-    ? "0"
-    : `${snap.corners.topLeft}px ${snap.corners.topRight}px ${snap.corners.bottomRight}px ${snap.corners.bottomLeft}px`
-  return { ...snap, radius }
+  return useSyncExternalStore(subscribeWindow, () => windowSnapshot)
 }

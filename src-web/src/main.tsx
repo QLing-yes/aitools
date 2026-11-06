@@ -3,8 +3,10 @@ import { createRoot } from "react-dom/client"
 import { RouterProvider } from "react-router"
 
 import "./index.scss"
+import { WindowReveal } from "@/components/layout/window-reveal.tsx"
 import { ThemeProvider } from "@/components/theme-provider.tsx"
-import { showWindow, onSidecarTerminated } from "@/lib/tauri"
+import { mountLayerInspector } from "@/dev/layer-inspector.ts"
+import { onSidecarTerminated } from "@/lib/tauri"
 import { router } from "@/routes/router.tsx"
 import { installWebviewGuards } from "@/shortcuts/webview.ts"
 
@@ -20,11 +22,13 @@ createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <ThemeProvider>
       <RouterProvider router={router} />
+      {/* 首屏提交后才让窗口出场（启动阶段窗口保持最小化） */}
+      <WindowReveal />
     </ThemeProvider>
   </StrictMode>
 )
 
-// 页面挂载完成后显示窗口，避免白屏闪烁
-showWindow()
-  .then(() => console.log("[app] window shown"))
-  .catch((e) => console.error("[app] window show failed:", e))
+// 层级背景检视：零依赖原生工具，仅 dev 挂载（release 分支被剔除）
+if (import.meta.env.DEV) {
+  mountLayerInspector()
+}

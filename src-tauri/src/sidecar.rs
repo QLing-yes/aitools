@@ -47,6 +47,8 @@ pub fn spawn_bun_sidecar(app: &tauri::App) {
     };
     let pid = child.pid();
     let handle = app.app_handle().clone();
+    // 进程确认起来后才发布令牌：此前前端问令牌一律得到空串（非空=可用 才成立）
+    app.state::<crate::state::SidecarReady>().set(true);
 
     // child 随任务持有，保证 stdin 管道在 Tauri 退出前不关闭
     tauri::async_runtime::spawn(async move {
@@ -70,6 +72,8 @@ pub fn spawn_bun_sidecar(app: &tauri::App) {
                     let msg = format!("[tauri] bun sidecar exited, code: {:?}", p.code);
                     println!("{msg}");
                     write(&mut log, &msg).await;
+                    // 令牌即刻失效：前端下次问到的就是空串，不再打本机端口
+                    handle.state::<crate::state::SidecarReady>().set(false);
                     // 通知前端：本地 /offline 能力已失效（emit 失败仅表示无人监听，忽略）
                     let _ = handle.emit("sidecar-terminated", p.code);
                     break;

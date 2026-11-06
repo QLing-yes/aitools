@@ -3,17 +3,12 @@
 import { ArrowLeftIcon, ArrowRightIcon } from "lucide-react"
 import { useNavigate } from "react-router"
 
+import { IconAction } from "@/components/layout/icon-action"
 import { SidebarCycleTrigger } from "@/components/layout/sidebar-cycle-trigger"
 import { ThemeMenu } from "@/components/layout/theme-menu"
 import { WindowControls } from "@/components/layout/window-controls"
 import { WindowDragRegion } from "@/components/layout/window-drag-region"
 import { WindowPin } from "@/components/layout/window-pin"
-import { Button } from "@/components/ui/button"
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip"
 import { useHistoryNav } from "@/hooks/use-history-nav"
 
 export function TitleBar() {
@@ -23,41 +18,23 @@ export function TitleBar() {
   return (
     <header
       data-slot="title-bar"
-      className="flex h-10 shrink-0 items-center justify-between select-none"
+      className="flex h-titlebar shrink-0 items-center justify-between select-none"
     >
       {/* 左侧：侧栏开关、后退、前进（no-drag 保持按钮可点击） */}
       <div className="flex items-center gap-0.5 pl-2 [-webkit-app-region:no-drag]">
         <SidebarCycleTrigger />
-        <Tooltip>
-          <TooltipTrigger
-            render={
-              <Button
-                variant="chrome"
-                size="icon"
-                disabled={!canGoBack}
-                onClick={() => navigate(-1)}
-              />
-            }
-          >
-            <ArrowLeftIcon className="size-4 shrink-0" />
-          </TooltipTrigger>
-          <TooltipContent>后退</TooltipContent>
-        </Tooltip>
-        <Tooltip>
-          <TooltipTrigger
-            render={
-              <Button
-                variant="chrome"
-                size="icon"
-                disabled={!canGoForward}
-                onClick={() => navigate(1)}
-              />
-            }
-          >
-            <ArrowRightIcon className="size-4 shrink-0" />
-          </TooltipTrigger>
-          <TooltipContent>前进</TooltipContent>
-        </Tooltip>
+        <IconAction
+          hint="后退"
+          button={{ disabled: !canGoBack, onClick: () => navigate(-1) }}
+        >
+          <ArrowLeftIcon className="size-4 shrink-0" />
+        </IconAction>
+        <IconAction
+          hint="前进"
+          button={{ disabled: !canGoForward, onClick: () => navigate(1) }}
+        >
+          <ArrowRightIcon className="size-4 shrink-0" />
+        </IconAction>
       </div>
 
       {/* 中间：拖动区域（左键拖动、双击切换最大化） */}

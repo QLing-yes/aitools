@@ -6,6 +6,7 @@ const root = process.cwd();
 
 // --------------------------------- 流程 ---------------------------------
 
+await check_ipc()
 await build_config()
 await Promise.all([
     build_web(),
@@ -20,6 +21,10 @@ process.exit(0);
 
 // --------------------------------- 构建 ---------------------------------
 
+/** IPC 契约漂移检查：Rust 命令/事件与 src-web 常量表不一致即中断构建 */
+function check_ipc() {
+    return build("ipc", "check:ipc", "")
+}
 function build_config() {
     return build("config", "scripts/config.ts")
 }

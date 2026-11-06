@@ -1,5 +1,5 @@
 import { mergeDeep } from "../src-bun/app/utils";
-import { write } from "../src-bun/app/utils/file";
+import { writeIfChanged } from "../src-bun/app/utils/file";
 import path from "node:path";
 
 const isProd = process.env.NODE_ENV === "production";
@@ -22,10 +22,9 @@ async function build_tauri_conf() {
     }
 
     const merged = mergeDeep(tauri_json, config);
-    const file = write(filePath);
-    file.write(JSON.stringify(merged, null, 2))
-    file.end();
-    console.log(`\x1b[32m✅ [tauri.conf.json] 编译完成 \x1b[0m\n`);
+    // 内容没变就不落盘：避免每次 dev/build 都把 tracked 文件刷成 dirty
+    const changed = writeIfChanged(filePath, JSON.stringify(merged, null, 2) + "\n");
+    console.log(`\x1b[32m✅ [tauri.conf.json] ${changed ? "已更新" : "无变化"}\x1b[0m\n`);
 }
 
 await build_tauri_conf();

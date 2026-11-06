@@ -27,14 +27,16 @@ node_modules 目录下的内容不能修改。
 
 bun 服务内部两套路由：
 
-- `/offline/...`: 桌面端专属，仅本地 sidecar 实例提供，服务器部署实例不注册
+- `/offline/...`: 桌面端专属，只在本地 sidecar 形态可用；服务器形态（无令牌）访问一律 404（门控在 `app/plugins/controller.plug.ts`，路由本身恒组合导出，见 `system/generated/routes.ts`）
 - `/api/...`: 公共通用，本地与服务器实例均有，只是 web 模块访问的地址不一样
 
 环境判断入口（各模块自查，互不牵扯）：
 
-- src-web: `isTauri` 区分桌面/浏览器；`sidecarToken()` 非空=本地 sidecar 就绪（仅 web 部署版与 dev 为空）；`/api` 地址取 `VITE_API_URL`（空=同源）
-- src-bun: `app/common/tauri_sidecar.ts` 的 `config.token` 非空=本地 sidecar 模式（令牌校验见控制器插件），空=服务器模式
-- src-tauri: 仅 release 模式启动 sidecar 并注入 `TAURI_SIDECAR` 令牌，dev/web 部署恒为空
+- src-web: `isTauri` 区分桌面/浏览器；平台细分（Win/mac/Linux）以 Rust `shell_platform` 为准，UA 只兜到首帧解析回来之前；`sidecarToken()` 非空=本地 sidecar 进程已起来且未退出（仅 web 部署版与 dev 为空）；地址与鉴权头统一由 `lib/backend.ts` 给出（`/api` 地址取 `VITE_API_URL`，空=同源）
+- src-bun: `app/common/tauri_sidecar.ts` 的 `config.token` 非空=本地 sidecar 模式（令牌校验与 offline 门控见控制器插件），空=服务器模式
+- src-tauri: 仅 release 模式启动 sidecar 并注入 `TAURI_SIDECAR` 令牌；令牌只在进程就绪后经 `sidecar_token` 下发（dev/web 部署恒为空）
+
+IPC 契约（命令名/事件名）由 `src-tauri` 与 `src-web/lib/tauri` 的常量表两端对齐，`bun run check:ipc` 校验并已在 `scripts/build.ts` 前置为构建闸门。
 
 .env 新增/修改变量后必须重启根 dev 进程：scripts/dev.ts 启动时固定 process.env 传给子进程，子进程 watch 重启不会重读。
 
@@ -61,6 +63,11 @@ bun 服务内部两套路由：
 根目录 `STRUCTURE.md` 是目录结构索引：全部目录/文件的职责、分区规范、跨模块契约速查。
 - 动手前查它快速定位文件与契约两端；不确定某文件归属先读对应条目。
 - 维护规则：任何文件增删、移动、目录职责变化，必须同一提交内更新该文件对应条目；一行一条写职责不写实现。
+
+# GLOSSARY.md
+
+根目录 `GLOSSARY.md` 是词汇表：分发形态/就绪/后端目标/主干链/衬层/内容面/锚点/宽度通道/淡出线/覆写契约/快捷键清单等术语的含义与真值来源。
+- 讨论架构、命名新模块、写契约注释时用它的词，不要另造说法；新增跨模块术语同步加一行。
 
 # 全局规则
 - 代码准则: 极致性能、高复用性、高可读性、易维护，逻辑嵌套≤3层，分区分块编写;

@@ -14,6 +14,23 @@ const modeNext: Record<SidebarMode, SidebarMode> = {
   hidden: "expanded",
 }
 
+/** 三态 → 注册表 collapsible：hidden 走 offcanvas 左滑出屏，其余走图标折叠 */
+export function collapsibleFor(mode: SidebarMode): "offcanvas" | "icon" {
+  return mode === "hidden" ? "offcanvas" : "icon"
+}
+
+/** 三态 → 注册表 open 布尔（provider 只认二态；此处为唯一翻译点） */
+export function openFor(mode: SidebarMode): boolean {
+  return mode === "expanded"
+}
+
+/** 注册表 open 变化 → 三态：抽屉开合只会落到 显示/折叠，绝不产生 hidden
+ * @param open provider 的新 open 值 @param current 当前模式 @returns 目标模式 */
+export function modeFromOpen(open: boolean, current: SidebarMode): SidebarMode {
+  if (open) return "expanded"
+  return current === "hidden" ? "hidden" : "icon"
+}
+
 /** 持久化的 UI 状态字段与行为 */
 interface UiState {
   /** 侧栏当前显示模式 */
@@ -38,7 +55,7 @@ function migrateUiState(
   return {
     sidebarMode:
       s.sidebarMode ?? (s.sidebarCollapsed ? ("icon" as const) : "expanded"),
-    sidebarWidth: s.sidebarWidth ?? 256,
+    sidebarWidth: s.sidebarWidth ?? 260,
   }
 }
 
@@ -50,7 +67,7 @@ export const useUiStore = create<UiState>()(
       setSidebarMode: (mode) => set({ sidebarMode: mode }),
       cycleSidebarMode: () =>
         set((s) => ({ sidebarMode: modeNext[s.sidebarMode] })),
-      sidebarWidth: 256,
+      sidebarWidth: 260,
       setSidebarWidth: (width) => set({ sidebarWidth: width }),
     }),
     { name: "aitools-ui", version: 1, migrate: migrateUiState }

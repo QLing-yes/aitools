@@ -52,6 +52,14 @@ function extractErrorText(message: string): string {
   return message
 }
 
+/** 拼接消息里的全部文本分片 @param message 消息 @param sep 分片分隔符 @returns 纯文本 */
+function textOf(message: UIMessage, sep = ""): string {
+  return message.parts
+    .filter((part) => part.type === "text")
+    .map((part) => part.text)
+    .join(sep)
+}
+
 /** 单条消息：用户右侧气泡纯文本，助手左侧 Markdown 排版；memo 隔离流式期整列表重渲染 */
 const ChatMessage = memo(function ChatMessage({
   message,
@@ -63,22 +71,12 @@ const ChatMessage = memo(function ChatMessage({
       <Message align="end">
         <MessageContent>
           <Bubble align="end" variant="muted">
-            <BubbleContent>
-              {message.parts
-                .filter((part) => part.type === "text")
-                .map((part) => part.text)
-                .join("")}
-            </BubbleContent>
+            <BubbleContent>{textOf(message)}</BubbleContent>
           </Bubble>
         </MessageContent>
       </Message>
     )
   }
-
-  const text = message.parts
-    .filter((part) => part.type === "text")
-    .map((part) => part.text)
-    .join("\n\n")
 
   return (
     <Message align="start">
@@ -87,7 +85,9 @@ const ChatMessage = memo(function ChatMessage({
           <BubbleContent>
             {/* overflow-x-auto: 长表格/代码横向滚动，不撑破气泡 */}
             <div className="typeset overflow-x-auto">
-              <ReactMarkdown remarkPlugins={[remarkGfm]}>{text}</ReactMarkdown>
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                {textOf(message, "\n\n")}
+              </ReactMarkdown>
             </div>
           </BubbleContent>
         </Bubble>

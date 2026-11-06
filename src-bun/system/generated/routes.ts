@@ -19,4 +19,4 @@ const plug_0 = () => new Elysia({ prefix: "api", detail: { tags:["/api"] }, name
 const plug_2 = () => new Elysia({ prefix: "offline", detail: { tags:["/offline"] }, name: num() })
 	.use(mod_0)
 
-export default plug_0();
+export default new Elysia({ name: num() }).use(plug_0()).use(plug_2());

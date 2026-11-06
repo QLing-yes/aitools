@@ -3,8 +3,7 @@
 
 import { CopyIcon, MinusIcon, SquareIcon, XIcon } from "lucide-react"
 
-import { Button } from "@/components/ui/button"
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
+import { IconAction } from "@/components/layout/icon-action"
 import {
   closeWindow,
   isTauri,
@@ -24,47 +23,25 @@ export function WindowControls() {
 
   return (
     <>
-      <Tooltip>
-        <TooltipTrigger
-          render={<Button variant="chrome" size="icon" onClick={minimizeWindow} />}
-        >
-          <MinusIcon className="size-4 shrink-0" />
-        </TooltipTrigger>
-        <TooltipContent>最小化</TooltipContent>
-      </Tooltip>
-      <Tooltip>
-        <TooltipTrigger
-          render={
-            <Button
-              variant="chrome"
-              size="icon"
-              onClick={toggleMaximizeWindow}
-            />
-          }
-        >
-          {isMaximized ? (
-            <CopyIcon className="size-4 shrink-0" />
-          ) : (
-            <SquareIcon className="size-4 shrink-0" />
-          )}
-        </TooltipTrigger>
-        <TooltipContent>{isMaximized ? "还原" : "最大化"}</TooltipContent>
-      </Tooltip>
-      <Tooltip>
-        <TooltipTrigger
-          render={
-            <Button
-              variant="chrome"
-              size="icon"
-              className={closeBtnClass}
-              onClick={closeWindow}
-            />
-          }
-        >
-          <XIcon className="size-4 shrink-0" />
-        </TooltipTrigger>
-        <TooltipContent>关闭</TooltipContent>
-      </Tooltip>
+      <IconAction hint="最小化" button={{ onClick: minimizeWindow }}>
+        <MinusIcon className="size-4 shrink-0" />
+      </IconAction>
+      <IconAction
+        hint={isMaximized ? "还原" : "最大化"}
+        button={{ onClick: toggleMaximizeWindow }}
+      >
+        {isMaximized ? (
+          <CopyIcon className="size-4 shrink-0" />
+        ) : (
+          <SquareIcon className="size-4 shrink-0" />
+        )}
+      </IconAction>
+      <IconAction
+        hint="关闭"
+        button={{ className: closeBtnClass, onClick: closeWindow }}
+      >
+        <XIcon className="size-4 shrink-0" />
+      </IconAction>
     </>
   )
 }

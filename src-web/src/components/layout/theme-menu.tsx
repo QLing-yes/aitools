@@ -3,12 +3,7 @@
 import { MonitorIcon, MoonIcon, SunIcon } from "lucide-react"
 
 import { useTheme, type Theme } from "@/components/theme-provider"
-import { Button } from "@/components/ui/button"
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip"
+import { IconAction } from "@/components/layout/icon-action"
 import { startThemeTransition } from "@/lib/theme-transition"
 
 /** 循环顺序：浅色→深色→跟随系统→浅色 */
@@ -43,13 +38,11 @@ export function ThemeMenu() {
   const Icon = themeIcon[theme]
 
   return (
-    <Tooltip>
-      <TooltipTrigger render={<Button variant="chrome" size="icon" onClick={cycle} />}>
-        <Icon className="size-4 shrink-0" />
-      </TooltipTrigger>
-      <TooltipContent side="bottom">
-        切换到{themeLabel[nextTheme[theme]]}
-      </TooltipContent>
-    </Tooltip>
+    <IconAction
+      hint={`切换到${themeLabel[nextTheme[theme]]}`}
+      button={{ onClick: cycle }}
+    >
+      <Icon className="size-4 shrink-0" />
+    </IconAction>
   )
 }

@@ -20,7 +20,8 @@ function dev_web() {
     return dev("web", "dev", "src-web")
 }
 function dev_tauri() {
-    return dev("tauri", "tauri dev", "")
+    // devtools 是 cargo feature（不是 cfg(debug_assertions) 能选的），仅 dev 开启
+    return dev("tauri", "tauri dev --features devtools", "")
 }
 
 // --------------------------------- 工具 ---------------------------------

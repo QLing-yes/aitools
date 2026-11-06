@@ -3,17 +3,8 @@
 import { PinIcon, PinOffIcon } from "lucide-react"
 import { useEffect, useState } from "react"
 
-import { Button } from "@/components/ui/button"
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip"
-import {
-  isAlwaysOnTop,
-  isTauri,
-  setAlwaysOnTop,
-} from "@/lib/tauri"
+import { IconAction } from "@/components/layout/icon-action"
+import { isAlwaysOnTop, isTauri, setAlwaysOnTop } from "@/lib/tauri"
 
 export function WindowPin() {
   /** 当前是否置顶 */
@@ -40,20 +31,11 @@ export function WindowPin() {
   const Icon = pinned ? PinOffIcon : PinIcon
 
   return (
-    <Tooltip>
-      <TooltipTrigger
-        render={
-          <Button
-            variant="chrome"
-            size="icon"
-            aria-pressed={pinned}
-            onClick={toggle}
-          />
-        }
-      >
-        <Icon className="size-4 shrink-0" />
-      </TooltipTrigger>
-      <TooltipContent>{pinned ? "取消置顶" : "窗口置顶"}</TooltipContent>
-    </Tooltip>
+    <IconAction
+      hint={pinned ? "取消置顶" : "窗口置顶"}
+      button={{ "aria-pressed": pinned, onClick: toggle }}
+    >
+      <Icon className="size-4 shrink-0" />
+    </IconAction>
   )
 }

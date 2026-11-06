@@ -1,2 +1,0 @@
-- SVG 呈现属性不吃 `var()`：xyflow 等把 color 类 prop 写进 `fill=` 属性的库，传 CSS 变量会静默失效——主题化走库的 colorMode/theme 通道，别自己塞变量字符串
-- Tailwind v4 + Sass：`@tailwindcss/vite` 不编译 .scss 里的 `@apply`（原样漏进产物）与 `@theme inline` 变量（不导出），基础层等价物要写原生 CSS + 字面量；包 CSS 的 `@import` 需 `.css` 后缀或 `url()` 形式透传，否则 sass 会解析 Tailwind 专属 at-rule 报错

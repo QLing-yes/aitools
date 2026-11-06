@@ -1,5 +1,7 @@
 import * as React from "react"
 
+import { setWindowTheme } from "@/lib/tauri"
+
 export type Theme = "dark" | "light" | "system"
 type ResolvedTheme = "dark" | "light"
 
@@ -63,7 +65,7 @@ function disableTransitionsTemporarily() {
 
 export function ThemeProvider({
   children,
-  defaultTheme = "system",
+  defaultTheme = "light",
   storageKey = "theme",
   disableTransitionOnChange = true,
   ...props
@@ -95,6 +97,8 @@ export function ThemeProvider({
 
       root.classList.remove("light", "dark")
       root.classList.add(next)
+      // 顶边描边已由 web 自绘，这里只同步 OS 侧明暗（任务栏缩略图/DWM 着色）
+      setWindowTheme(next === "dark")
 
       if (restoreTransitions) {
         restoreTransitions()

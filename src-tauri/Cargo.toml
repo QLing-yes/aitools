@@ -23,9 +23,10 @@ tauri-plugin-window-state = "2.5.0"
 tauri-plugin-single-instance = "2.5.5"
 serde = { version = "1", features = ["derive"] }
 
-# devtools 仅调试构建启用，release 不带 DevTools
-[target.'cfg(debug_assertions)'.dependencies]
-tauri = { version = "2", features = ["devtools"] }
+# devtools 只能按 cargo feature 开关（cfg(debug_assertions) 不能用于选择依赖，cargo 会告警并失效）
+# dev 由 scripts/dev.ts 传 `--features devtools`，release 不带 → 包体不含 DevTools
+[features]
+devtools = ["tauri/devtools"]
 
 # WebView2 非客户区支持（触摸拖窗）+ DWM 边框控制；windows 用 core::Interface 做接口 cast
 [target.'cfg(target_os = "windows")'.dependencies]

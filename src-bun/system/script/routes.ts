@@ -119,7 +119,6 @@ const DEFAULT_CONFIG = {
     comment: "// auto generated",
     import: 'import Elysia from "elysia";\nimport * as $g from "@/app/common";',
     pluginPrefix: "plug_",
-    exportDefault: "plug_0()",
   },
 };
 
@@ -172,6 +171,18 @@ export default function generate(op: Config) {
       });
   }
 
-  chunks.push(`\nexport default ${output.exportDefault};\n`);
+  // 顶层路由目录（如 api / offline）全部组合进默认导出；
+  // 哪个形态开放哪条前缀由 app/plugins 判定，生成器不猜业务
+  const rootIdx = dirKeys
+    .filter((d) => getDepth(d, config.fromDir) === 1)
+    .map((d) => dirInfo.get(d)?.idx)
+    .filter((i): i is number => i !== undefined)
+  const exportDefault =
+    output.exportDefault ??
+    `new Elysia({ name: num() })${rootIdx
+      .map((i) => `.use(${output.pluginPrefix}${i}())`)
+      .join("")}`
+
+  chunks.push(`\nexport default ${exportDefault};\n`);
   writeIfChanged(config.target, chunks.join(""));
 }

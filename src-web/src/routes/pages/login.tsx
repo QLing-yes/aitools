@@ -24,7 +24,7 @@ import {
 } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import { TooltipProvider } from "@/components/ui/tooltip"
-import { isTauri, useWindowState } from "@/lib/tauri"
+import { isTauri } from "@/lib/tauri"
 import { useAuthStore } from "@/store/auth"
 
 /** 各字段错误文案；无错时对应键为 undefined */
@@ -44,7 +44,6 @@ function validate(username: string, password: string): FormErrors {
 export function LoginPage() {
   const navigate = useNavigate()
   const login = useAuthStore((s) => s.login)
-  const { radius } = useWindowState()
   const [username, setUsername] = useState("")
   const [password, setPassword] = useState("")
   const [errors, setErrors] = useState<FormErrors>({})
@@ -66,7 +65,7 @@ export function LoginPage() {
   return (
     <TooltipProvider>
       <div
-        style={{ borderRadius: radius }}
+        data-app-radius
         className="bg-shell bg-dots relative flex min-h-svh flex-col items-center justify-center gap-6 overflow-hidden p-6 pt-12 md:p-10"
       >
         {/* 桌面端：顶部拖动区 + 主题菜单 + 窗口三键；浏览器：右上角悬浮主题入口 */}

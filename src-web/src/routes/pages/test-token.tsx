@@ -11,6 +11,14 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
+import {
+  CodeBlock,
+  CodeBlockActions,
+  CodeBlockContent,
+  CodeBlockCopyButton,
+  CodeBlockHeader,
+  CodeBlockTitle,
+} from "@/components/ui/code-block"
 import { Spinner } from "@/components/ui/spinner"
 import { client } from "@/lib/api"
 
@@ -52,9 +60,15 @@ export function TestTokenPage() {
               测试 Token 调用 POST /success
             </Button>
             {result && (
-              <pre className="max-h-48 w-full overflow-auto rounded-md bg-muted p-2 font-mono text-xs whitespace-pre-wrap">
-                {result}
-              </pre>
+              <CodeBlock size="sm" className="w-full">
+                <CodeBlockHeader>
+                  <CodeBlockTitle>响应内容</CodeBlockTitle>
+                  <CodeBlockActions>
+                    <CodeBlockCopyButton value={result} />
+                  </CodeBlockActions>
+                </CodeBlockHeader>
+                <CodeBlockContent wrap>{result}</CodeBlockContent>
+              </CodeBlock>
             )}
           </CardContent>
         </Card>
