@@ -4,13 +4,13 @@
 /** 持久化键登记表；值一经发布不可改（改了等于丢用户数据），新增只加行 */
 export const STORAGE_KEYS = {
   /** zustand UI store：侧栏模式/宽度 + 磨砂两项 */
-  ui: "aitools-ui",
+  ui: "aigc-ui",
   /** zustand 鉴权 store：username */
-  auth: "aitools-auth",
+  auth: "aigc-auth",
   /** 明暗偏好，裸字符串值 */
   theme: "theme",
   /** 设置页分栏布局 id，react-resizable-panels 自加前缀落盘为 `react-resizable-panels:<id>` */
-  settingsLayout: "aitools-settings-split",
+  settingsLayout: "aigc-settings-split",
   /** 层级检视器悬浮按钮位置，键由 src/dev/layer-inspector.ts 自持（该文件跨项目零依赖，不引本模块） */
   layerInspector: "dlx:pos",
 } as const

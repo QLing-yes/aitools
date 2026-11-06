@@ -103,14 +103,15 @@
        260px 与 store/ui.ts 的 sidebarWidth 默认值同值，折叠宽 3rem 与注册表 SIDEBAR_WIDTH_ICON 同值 */
   --sidebar-width: 260px;
   --sidebar-width-icon: 3rem;
-  /* 圆角通道兜底（真值由 lib/radius-channel 写到文档根）：与 store/ui.ts 的 RADIUS_DEFAULT
-       同值，改默认两处一起动——壳根、窗口描边与 VT 快照底色层共用 */
-  --app-radius: 5px;
-  /* CSS 磨砂旋钮（真值由 lib/glass-channel 写进文档根，此处仅兜底）：
-     `--glass-blur` 内容面自糊半径；`--film-a` 内容面壳色不透明度 %。
-     默认档与上限在 store/ui.ts 的 BLUR/FILM_DEFAULT·MAX，改一处两处一起动；只作用于 HTML 渲染，衬层恒实心 */
+  /* 圆角通道兜底取 0：裁切规则静态挂在 html/body 上，兜底非 0 会让 web 档首帧人为裁角；
+       桌面真值由 lib/radius-channel 在首绘前写入，描边与 VT 快照底色层读同一变量 */
+  --app-radius: 0px;
+  /* 个性化旋钮（真值由 lib/glass-channel 写进文档根，此处仅兜底）：
+     `--glass-blur` 内容面自糊半径；`--film-a` 内容面壳色不透明度 %；`--wash-a` 衬层背景渐变系数（1 开 / 0 关）。
+     默认档与上限在 store/ui.ts 的 *_DEFAULT·*_MAX，改一处两处一起动；只作用于 HTML 渲染，衬层恒实心 */
   --glass-blur: 12px;
   --film-a: 76;
+  --wash-a: 1;
   /* 导航层着色料：壳色轻掺前景色（亮微暗、暗微亮），供标题栏/侧栏作半透磨砂底 */
   --chrome-bg: color-mix(in oklab, var(--shell) 90%, var(--foreground));
   /* 按钮态色单源：以前景色按透明度叠加壳/面板，明暗主题自动对称（悬停 10% < 按下 16% < 选中 20%） */
@@ -170,7 +171,7 @@
 }
 
 /* UA 着色方案：决定「未被自绘覆盖」的像素用什么底色（默认画布、滚动条、表单控件、highlight）。
-   不声明则暗色下这些位置恒是白——壳根圆角裁掉的顶边尤其明显。 */
+   不声明则暗色下这些位置恒是白——整窗圆角裁掉的顶边尤其明显。 */
 html {
   color-scheme: light;
 }
@@ -348,19 +349,25 @@ body,
   --tw-ring-color: var(--edge);
 }
 
-/* 圆角通道挂钩：壳根与登录页根共用，值由 lib/tauri 写到文档根（最大化归零），VT 快照底色层同值 */
-[data-app-radius] {
+/* 整窗圆角：文档根与 body 同一组半径 + hidden 裁切（用户实测生效档）。
+   两层盒必须完全重合才安全：body 由 preflight 去 margin、与 html 同原点同尺寸，
+   故不产生逐角递减；一旦某层盒原点不同（如壳根）就必须只留一层。
+   半径值由 lib/radius-channel 写文档根供全树继承：桌面档非 0 即圆即裁，
+   web 档与最大化写 0 → 半径归零、裁切退化到矩形（overflow 声明恒在，不随档切换） */
+html,
+body {
   border-radius: var(--app-radius);
+  overflow: hidden;
 }
 
 /* 窗口描边：Tauri 侧 decorations/shadow 全关，OS 不再画任何线，改由壳根末尾覆写层自绘 1px
-   （inset box-shadow 跟随圆角、不占布局、不吃指针；z-30 压过壳内 fixed 侧栏 z-10/20，
-   又低于 Portal 到 body 的遮罩类 z-50；仅桌面渲染） */
+   （inset box-shadow 不占布局、不吃指针；半径取通道值——描边层不是裁切层，inherit 会继承到 0 变方框；
+   z-30 压过壳内 fixed 侧栏 z-10/20，又低于 Portal 到 body 的遮罩类 z-50；仅桌面渲染） */
 [data-app-edge] {
   position: absolute;
   inset: 0;
   z-index: 30;
-  border-radius: inherit;
+  border-radius: var(--app-radius);
   pointer-events: none;
   box-shadow: inset 0 0 0 1px var(--edge);
 }
@@ -371,10 +378,10 @@ body,
   background-image:
     url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.55 0 0 0 0 0.55 0 0 0 0 0.55 0 0 0 0.05 0'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E"),
     radial-gradient(60rem 40rem at 10% -10%,
-      color-mix(in oklab, var(--muted-foreground) 16%, transparent),
+      color-mix(in oklab, var(--muted-foreground) calc(var(--wash-a) * 16%), transparent),
       transparent 65%),
     radial-gradient(50rem 36rem at 95% 108%,
-      color-mix(in oklab, var(--muted-foreground) 12%, transparent),
+      color-mix(in oklab, var(--muted-foreground) calc(var(--wash-a) * 12%), transparent),
       transparent 60%);
   background-size: 140px 140px, auto, auto;
 }
@@ -467,7 +474,7 @@ body,
 }
 
 /* 快照树底色：html/body 全透明（Tauri 圆角窗口），过渡期间任何未覆盖帧都会透见桌面，铺壳色兜底；
-   底色矩形必须跟壳根同一个圆角，否则明暗切换的 300ms 里四角会被它填成尖角 */
+   底色矩形必须跟裁切层同一个圆角，否则明暗切换的 300ms 里四角会被它填成尖角 */
 ::view-transition {
   background: var(--shell);
   border-radius: var(--app-radius);

@@ -25,9 +25,9 @@
 | 标题栏带 | 自绘标题栏占住的那 2.5rem 高度 | `@theme --spacing-titlebar` |
 | 侧栏三态 | expanded / icon / hidden | `store/ui.ts`；到注册表二态的翻译也在这里 |
 | 宽度通道 | 发布到文档根的 `--sidebar-width(-icon)`，侧栏/画布/悬浮侧栏共同继承 | `lib/sidebar-channel.ts` |
-| 圆角通道 | 文档根 `--app-radius`：壳根、登录页根（挂 `[data-app-radius]`）、窗口描边与 VT 快照底色层同源，最大化归零 | 值在 `store/ui.ts` 的 `corners`；写通道在 `lib/radius-channel.ts`，合成器 `layout/window-radius.tsx`；兜底值在 index.scss |
+| 圆角通道 | 通道只出**值**：文档根 `--app-radius` 的四角半径串；形状与裁切是静态规则 `html, body{border-radius:var(--app-radius);overflow:hidden}`（两层盒重合才允许，无属性标记），非桌面档与最大化值为 0 = 不圆不裁。描边层与 VT 底色层读同一变量只用于画线/画底，不算第二处裁切 | 值在 `store/ui.ts` 的 `corners`；写入在 `lib/radius-channel.ts`，合成器 `layout/window-radius.tsx`；规则在 index.scss `html, body` |
 | 窗口描边 | OS 边框/阴影关闭后由 web 自绘的 1px 窗缘浅线（仅桌面渲染） | index.scss `[data-app-edge]` + `--edge` |
-| 个性化磨砂 | 内容面自糊半径 + 壳色不透明度两个可调量（`--glass-blur`/`--film-a`）；系统材质已撤销不用 | `store/ui.ts` ↔ `lib/glass-channel.ts` ↔ index.scss 契约条目 3 |
+| 个性化旋钮 | 内容面自糊半径、壳色不透明度、衬层背景渐变开关三个可调量（`--glass-blur`/`--film-a`/`--wash-a`）；系统材质已撤销不用 | `store/ui.ts` ↔ `lib/glass-channel.ts` ↔ index.scss 契约条目 3/衬层规则 |
 | 出场（reveal） | 启动不占屏（Windows 最小化，其余保持隐藏），web 首屏提交后还原+显示+聚焦 | `commands::reveal_window` ↔ `components/layout/window-reveal.tsx`；动作在 lib.rs `present_window` |
 | 淡出线 | 1px、两端 4% 全透明的分割线（含两条可拖线），恒显不变色 | `--line-h` / `--line-v` |
 | 覆写契约 | 本仓压过 shadcn/Base UI 内部实现的 13 条层外规则 | index.scss「注册表覆写契约」一节 |

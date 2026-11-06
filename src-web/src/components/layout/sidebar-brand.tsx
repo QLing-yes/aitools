@@ -1,6 +1,6 @@
 // 侧栏头部品牌区：logo + 应用名（折叠成图标态时仅剩 logo）
 
-import { BrandLogo } from "@/components/brand-logo"
+import { BRAND_NAME, BrandLogo } from "@/components/brand-logo"
 import {
   SidebarHeader,
   SidebarMenu,
@@ -20,7 +20,7 @@ export function SidebarBrand() {
             <BrandLogo />
             {/* 折叠成图标时名称淡出并退出占位（flex-none + w-0），使 logo 在图标栏内左右居中 */}
             <div className="grid flex-1 text-left text-sm leading-tight transition-opacity group-data-[collapsible=icon]:w-0 group-data-[collapsible=icon]:flex-none group-data-[collapsible=icon]:opacity-0">
-              <span className="truncate font-semibold">aitools</span>
+              <span className="truncate font-semibold">{BRAND_NAME}</span>
             </div>
           </SidebarMenuButton>
         </SidebarMenuItem>

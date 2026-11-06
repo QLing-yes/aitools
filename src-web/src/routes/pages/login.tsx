@@ -4,7 +4,7 @@ import { ArrowLeftIcon } from "lucide-react"
 import { useState } from "react"
 import { useNavigate } from "react-router"
 
-import { BrandLogo } from "@/components/brand-logo"
+import { BRAND_NAME, BrandLogo } from "@/components/brand-logo"
 import { IconAction } from "@/components/layout/icon-action"
 import { ThemeMenu } from "@/components/layout/theme-menu"
 import { WindowControls } from "@/components/layout/window-controls"
@@ -86,7 +86,6 @@ export function LoginPage() {
   return (
     <TooltipProvider>
       <div
-        data-app-radius
         className="bg-shell bg-dots relative flex min-h-svh flex-col items-center justify-center gap-6 overflow-hidden p-6 pt-12 md:p-10"
       >
         {/* 桌面端：返回 + 顶部拖动区 + 主题菜单 + 窗口三键；浏览器：左上返回、右上悬浮主题入口 */}
@@ -118,7 +117,7 @@ export function LoginPage() {
           {/* 品牌区：logo + 名称 */}
           <div className="flex items-center gap-2 self-center font-medium">
             <BrandLogo />
-            aitools
+            {BRAND_NAME}
           </div>
 
           {/* 卡片+光晕容器：光晕衬于卡片左下，透出磨砂层次 */}

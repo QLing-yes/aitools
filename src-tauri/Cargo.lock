@@ -18,7 +18,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "aitools"
+name = "aigc"
 version = "0.1.0"
 dependencies = [
  "chrono",

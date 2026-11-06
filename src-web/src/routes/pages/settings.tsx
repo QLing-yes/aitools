@@ -35,6 +35,7 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Separator } from "@/components/ui/separator"
 import { Slider } from "@/components/ui/slider"
+import { Switch } from "@/components/ui/switch"
 import {
   Tabs,
   TabsContent,
@@ -171,12 +172,14 @@ function SliderRow({
   )
 }
 
-/** 个性化面板：内容面磨砂两旋钮 + 桌面端窗口四角圆角 */
+/** 个性化面板：内容面磨砂两旋钮 + 背景渐变开关 + 桌面端窗口四角圆角 */
 function PersonalizePanel() {
   const glassBlur = useUiStore((s) => s.glassBlur)
   const setGlassBlur = useUiStore((s) => s.setGlassBlur)
   const glassFilm = useUiStore((s) => s.glassFilm)
   const setGlassFilm = useUiStore((s) => s.setGlassFilm)
+  const bgWash = useUiStore((s) => s.bgWash)
+  const setBgWash = useUiStore((s) => s.setBgWash)
   const corners = useUiStore((s) => s.corners)
   const setCorner = useUiStore((s) => s.setCorner)
 
@@ -203,6 +206,14 @@ function PersonalizePanel() {
           onChange={setGlassFilm}
         />
       </FieldSet>
+      <Field orientation="horizontal">
+        <FieldLabel htmlFor="bg-wash">背景渐变</FieldLabel>
+        <Switch
+          id="bg-wash"
+          checked={bgWash}
+          onCheckedChange={setBgWash}
+        />
+      </Field>
       {isTauri && (
         <FieldSet>
           <FieldLegend>窗口圆角</FieldLegend>

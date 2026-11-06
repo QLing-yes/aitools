@@ -84,7 +84,7 @@ async function build(tag: string, command: string, cwd = "") {
 async function dist() {
     /** 发布产物源路径（相对项目根目录） */
     const items = [
-        "src-tauri/target/release/aitools.exe",
+        "src-tauri/target/release/AIGC.exe",
         "src-tauri/target/release/bun-service.exe",
         ".env",
         "src-bun/public",

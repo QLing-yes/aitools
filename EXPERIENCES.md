@@ -16,7 +16,7 @@
 - Win11 对顶层窗口恒按约 8px 裁切圆角、系统不给查询 API（CSS 设 0 也不是真直角）→ setup 里 `DWMWA_WINDOW_CORNER_PREFERENCE=DWMWCP_DONOTROUND` 关掉，四角曲线全归 CSS；原 `get/set_window_corners` 只是 Rust 端的存值+回声（无任何平台动作），随该结论一并删除，圆角真值改由 web 设置项持久化
 
 ## 主题 / View Transitions
-- VT 期间文档被快照树整体替换：透明窗口必须给 `::view-transition` 铺底色，否则空帧透见桌面；该底色矩形还得带 `border-radius: var(--app-radius)`（与壳根同源圆角），否则明暗切换的 300ms 内四角被填成尖角
+- VT 期间文档被快照树整体替换：透明窗口必须给 `::view-transition` 铺底色，否则空帧透见桌面；该底色矩形还得带 `border-radius: var(--app-radius)`（与文档根同源圆角），否则明暗切换的 300ms 内四角被填成尖角
 - `startViewTransition(cb)` 的 cb 不在点击同 tick 执行，React 状态又走批处理 → 点击当帧毫无反馈才是「顿一下」的根源；正解＝按钮反馈做本地乐观档（点击当帧提交）+ 事务排到下一个任务，class 仍在 cb 内同步落。反面教训：cb 里包 `flushSync`（只有 `react-dom` 导出，`react` 没有）不但不更快，还把整树同步渲染压到快照捕获之前，更卡；另 `ready`/`finished` 在无帧或被打断时必 reject，不接住就是控制台里的未处理拒绝
 - 窗口最小化时 WebView2 停帧但 JS 照跑：rAF 永不回调 → 出场/就绪这类信号只能挂 useEffect，不能用帧或 `onload`；另 `ShowWindow(SW_MINIMIZE)` 属 show 类，会把 `visible:false` 的窗口显示成最小化（任务栏有按钮、不上屏）
 - 动画用纯 CSS 方向规则（`.dark` 回调内翻转、先于新快照捕获）；`.ready`+WAAPI 会被跳过机制静默吞掉
@@ -49,4 +49,6 @@
 - cargo 的 cfg(debug_assertions) 不能用于 [target.*] 选依赖（cargo 直接告警失效）：按构建模式开关能力一律走 [features] + CLI 的 --features 透传
 - 一次性随机令牌 ≠ 服务可用：令牌必须由"进程已起来且未退出"的就绪状态门控，否则前端拿到的判据是假的（所有请求 401/拒连且无提示）
 - CSS 变量的继承域=DOM 子树：Portal 到 body（Sheet/Dialog）或挂在壳根的画布锚点取不到 provider 子树里定义的变量（如 `--sidebar-width`），失效后退化成 auto，绝对定位空 div 塌成 0 宽细条（表面只像"颜色不对"）→ 通道一律发布到文档根，别在每处 inline 补一份
+- 整窗圆角走静态规则 `html, body{border-radius:var(--app-radius);overflow:hidden}`（用户实测生效档），通道只出值、不挂属性标记。两层同时画圆角的前提是**盒完全重合**：body 由 preflight 去 margin，与 html 同原点同尺寸，弧逐像素对齐。原点不同的两层（文档根 + 壳根）才是灾难——两层同半径矩形相交会把不到 1px 的框偏差放大成逐角递减的弧（左上原点重合最准，右上→右下→左下依次变小，半径越小越明显，就是用户报的「四个角配置一样但顺时针越来越小」），所以壳根/登录页根/页面组件一律禁止再画圆角，组件内也禁止 inline `borderRadius`。另注：只写 `border-radius` 不写裁切看不见——主干链零背景，圆角处该露桌面的是页面画布矩形，`border-radius` 只削元素自己的背景/盒线，不裁后代。描边层与 `::view-transition` 底色层读同一变量只用于画线/画底，不构成第二处裁切（`inherit` 在这里不可用，因为父层已无圆角）
+- 主干恒透明时圆外像素不画布，透明窗口处即露出桌面，所以裁切生效与否只能靠实窗看；无帧环境里 `elementFromPoint` 命中测试也判不出来（画布层 `pointer-events:none`，命中永远落到 `#root`）
 - Tailwind v4 的 md: 断点可被 @theme --breakpoint-md 改写；JS(matchMedia)/SCSS(媒体查询)/CLI 工具类三处断点无法共享变量，只能同值 + 注释互指，改一处必须三处齐动

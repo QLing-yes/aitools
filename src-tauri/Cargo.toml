@@ -1,12 +1,12 @@
 [package]
-name = "aitools"
+name = "aigc"
 version = "0.1.0"
 description = "A Tauri App"
 edition = "2024"
 
 # 桌面应用仅需 rlib；staticlib/cdylib 供移动端使用
 [lib]
-name = "aitools_lib"
+name = "aigc_lib"
 crate-type = ["rlib"]
 
 [build-dependencies]

@@ -1,8 +1,8 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
-  "productName": "aitools",
+  "productName": "AIGC",
   "version": "0.1.0",
-  "identifier": "com.aitools",
+  "identifier": "com.aigc",
   "build": {
     "beforeDevCommand": "",
     "beforeBuildCommand": "",
@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "aitools",
+        "title": "AIGC",
         "width": 1400,
         "height": 850,
         "minWidth": 375,
@@ -40,6 +40,8 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ],
-    "externalBin": []
+    "externalBin": [
+      "../src-bun/bun-service"
+    ]
   }
 }

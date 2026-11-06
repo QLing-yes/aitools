@@ -39,7 +39,7 @@ bun_gui_template/
 
 src/：
 - `main.tsx` — 挂载入口：引全局样式、输入守卫、sidecar 退出监听、`<WindowRadius/>` 圆角通道、`<WindowReveal/>` 出场时机
-- `index.scss` — 全局样式单一入口：Tailwind 引入、主题令牌(:root/.dark 含 --shell/--edge/--separator/--chrome-*/--nav-idle/--line-h|--line-v/侧栏宽度通道默认值/--app-radius 兜底/--glass-blur·--film-a 磨砂旋钮兜底)、窗口钩子 `[data-app-radius]`·`[data-app-edge]`、`@theme`（--breakpoint-md=768px、--spacing-titlebar=2.5rem）、「注册表覆写契约」索引节（升级 CLI 前按该清单复查）、VT 圆形揭示、基础层
+- `index.scss` — 全局样式单一入口：Tailwind 引入、主题令牌(:root/.dark 含 --shell/--edge/--separator/--chrome-*/--nav-idle/--line-h|--line-v/侧栏宽度通道默认值/--app-radius 兜底/--glass-blur·--film-a·--wash-a 个性化旋钮兜底)、窗口钩子 `html, body`（圆角与裁切静态规则，值取 `--app-radius`）·`[data-app-edge]`（描边层）、`@theme`（--breakpoint-md=768px、--spacing-titlebar=2.5rem）、「注册表覆写契约」索引节（升级 CLI 前按该清单复查）、VT 圆形揭示、基础层
 - `assets/` — 打包静态资源；`public/logo.svg` — 品牌 logo（favicon/侧栏/登录共用，明暗自适应）；`public/bg-gradient.png` — 登录页渐变装饰图（源自 reactflow.dev hero，`.bg-gradient` 类引用）
 - `styles/typeset.scss` — Markdown 排版样式
 
@@ -48,7 +48,7 @@ components/：
 - `brand-logo.tsx` — 品牌 logo 统一组件（默认 size-5 = 侧栏图标+4px）
 - `theme-provider.tsx` — 主题上下文（light/dark/system，html class 与 Windows 窗口原生明暗同步落；未选过时默认 light，与 index.html 首帧脚本同值）
 - `layout/` — 应用外壳：
-  - `app-shell.tsx` — 圆角壳（`[data-app-radius]` 走圆角通道 + `<CanvasAnchor/>` 锚点）+ TitleBar + 常驻侧栏（三态经 store/ui 纯函数翻译）+ Outlet + 桌面专属末尾 `[data-app-edge]` 描边层；宽度变更时发布到通道
+  - `app-shell.tsx` — 应用壳根（本身不画圆角，整窗形状由文档根承担）：`<CanvasAnchor/>` 锚点 + TitleBar + 常驻侧栏（三态经 store/ui 纯函数翻译）+ Outlet + 桌面专属末尾 `[data-app-edge]` 描边层；宽度/磨砂/渐变变更时发布到通道
   - `page-canvas.tsx` — 页面背景画布：自持锚点槽位（`CanvasAnchor` + useSyncExternalStore，无 context）；每页两层＝壳色噪点晕染衬层 + 半透磨砂内容面；`surfaceLeft(mode, desktop)` 是本模块拥有的偏移算法（left 直写 style）
   - `icon-action.tsx` — 图标按钮 + 下方提示的统一外壳（标题栏/侧栏图标动作一律用它）
   - `title-bar.tsx` — `h-titlebar` 自绘标题栏：三态开关/前进后退 + 拖动区 + 主题/置顶/窗口三键
@@ -67,13 +67,13 @@ components/：
 
 routes/：
 - `router.tsx` — 路由表：`/login` 独立于外壳；壳内 home/chat/flow/settings（+桌面专属 test）；chat、flow lazy 分包
-- `pages/` — `home` 演示页 / `chat` AI 对话 / `flow` 流程测试 / `login` 表单登录（预留校验；左上角返回入口：可后退走 navigate(-1)，直达时兜底 replace 到主界面，桌面档摆在 40px 拖动条左端、web 档悬浮左上）/ `settings` 官方 Tabs 分区导航（当前分区以 URL `?section=` 为唯一事实，非法值回落首项；≥768 可拖宽分栏；分区表（id/label/icon/Panel/action）同时驱动导航、面板与标题行右侧动作：快捷键=Item/Kbd 清单，个性化=磨砂两滑杆 + 桌面专属四角圆角四滑杆 + 标题右侧「重置」回默认档）/ `test-token` sidecar 令牌测试（仅桌面，结果用官方 Code Block）
+- `pages/` — `home` 演示页 / `chat` AI 对话 / `flow` 流程测试 / `login` 表单登录（预留校验；左上角返回入口：可后退走 navigate(-1)，直达时兜底 replace 到主界面，桌面档摆在 40px 拖动条左端、web 档悬浮左上）/ `settings` 官方 Tabs 分区导航（当前分区以 URL `?section=` 为唯一事实，非法值回落首项；≥768 可拖宽分栏；分区表（id/label/icon/Panel/action）同时驱动导航、面板与标题行右侧动作：快捷键=Item/Kbd 清单，个性化=磨砂两滑杆 + 背景渐变开关 + 桌面专属四角圆角四滑杆 + 标题右侧「重置」回默认档）/ `test-token` sidecar 令牌测试（仅桌面，结果用官方 Code Block）
 
 dev/（零依赖原生工具，可整体拷走）：
 - `layer-inspector.ts` — 层级背景检视器：`mountLayerInspector()` 唯一导出（幂等，返回卸载函数；卸载会清 `data-dlx` 标记与 window 监听）。自动扫描绘制层（html、body 恒为 #0/#1 底层，其余按 `getComputedStyle` 自带 bg/背景图/backdrop-filter/box-shadow/outline 判定），文档顺序即层序并记最近登记父层；`[data-dlx=n]` + 注入样式表逐层 `visibility` 切换——只在「祖先正被隐藏会继承下来」时才补 visible，绝不顶掉宿主自己的 visibility；默认由内向外，⇄ 反转，⟳ 重扫；面板 = 可拖动吸边按钮（位置存 localStorage）+ 进度条/数字框 + tag#id.class.data-* 折叠树，点标签复制裸词（剪贴板失败可框选 Ctrl+C）；工具自身打 `[data-dlx-ui]`，扫描跳过且样式永久豁免
 
 store/（zustand persist；落盘键名一律取 `lib/storage.ts` 登记表，`migrate`+`merge` 共用同一收敛函数，每次加载挡住脏值）：
-- `ui.ts` — 侧栏三态模式 + 宽度（默认 260px，与 index.scss `--sidebar-width` 兜底同值；收敛进 `sidebar-channel` 的 160–480）+ 个性化三项组（`glassBlur` 12px、`glassFilm` 76%、`corners` 四角半径 5px；默认档 `*_DEFAULT` 与上限 `BLUR_MAX`/`FILM_MAX`/`RADIUS_MAX` 同处登记，滑杆与迁移共用）+ `resetPersonalize()`（一次回默认档，不动侧栏）；v4（v1 迁旧二态、v2 加磨砂、v3 撤系统材质并把填充回旧档、v4 四角半径入库）
+- `ui.ts` — 侧栏三态模式 + 宽度（默认 260px，与 index.scss `--sidebar-width` 兜底同值；收敛进 `sidebar-channel` 的 160–480）+ 个性化四项组（`glassBlur` 12px、`glassFilm` 76%、`bgWash` 默认开、`corners` 四角半径 7px；默认档 `*_DEFAULT` 与上限 `BLUR_MAX`/`FILM_MAX`/`RADIUS_MAX` 同处登记，滑杆、迁移与回默认档共用；改默认只动常量，已持久化的旧值不追改）+ `resetPersonalize()`（一次回默认档，不动侧栏）；v4（v1 迁旧二态、v2 加磨砂、v3 撤系统材质并把填充回旧档、v4 四角半径入库）
 - `auth.ts` — 登录态（预留，无服务端校验）；非字符串用户名按未登录处理
 
 hooks/：
@@ -86,12 +86,12 @@ shortcuts/：
 
 lib/：
 - `tauri/index.ts` — Tauri 能力唯一入口：`IPC`/`IPC_EVENT` 常量表（命令与事件名不再散写）+ 窗口操作/置顶/sidecarToken（仅缓存非空结果）/终止事件订阅 + `useWindowState` 单例快照（只剩最大化标志，圆角不在此处）
-- `radius-channel.ts` — 圆角通道：把四角半径合成 border-radius 串发布到文档根（`publishRadius(corners, maximized)`，最大化归零），壳根/描边/VT 快照底色层继承同一值
+- `radius-channel.ts` — 圆角通道：把四角半径合成 border-radius 串写到文档根供全树继承（`publishRadius(corners, maximized, clip)`）；只出值不挂标记——桌面档且未最大化输出四值，其余输出 `0`（web 档一律 0，不圆不裁），形状与裁切由 index.scss 的 `html, body` 静态规则消费
 - `backend.ts` — 后端目标单一来源：`apiUrl` 拼址、`authHeaders` 注令牌、`treatyRequest` 供 Eden；形态判据只在这里
 - `api.ts` — Eden 客户端（消费 backend）；`chat.ts` — AI SDK transport（消费 backend，fetch 白名单）
 - `sidebar-channel.ts` — 侧栏宽度通道：把 `--sidebar-width` 发布到文档根（`publishWidth/readWidth/nextWidth` + 可拖区间 `WIDTH_MIN`/`WIDTH_MAX`），使侧栏、画布、body Portal 的悬浮侧栏继承同一个值；宽度上下限在此单源，拖拽与持久化收敛共用
 - `storage.ts` — 持久化唯一登记处：`STORAGE_KEYS` 表列出全部 localStorage 落点（含第三方库/检视器自管的键，只做索引不接管）+ `readText`/`writeText` 容错读写（隐私模式与配额失败一律当没存过/写不进）
-- `glass-channel.ts` — 磨砂旋钮通道：把 `--glass-blur`/`--film-a` 发布到文档根（`publishGlass`），内容面着色与模糊只读这两个令牌，平台无关
+- `glass-channel.ts` — 个性化旋钮通道：把 `--glass-blur`/`--film-a`/`--wash-a` 发布到文档根（`publishGlass`），内容面着色与模糊、衬层径向晕染只读这三个令牌，平台无关
 - `theme-transition.ts` — 主题切换事务 `startThemeTransition({apply, rollback, x, y})`：写 --vt-* 触发圆形揭示，回调内只同步落 html class（新快照随后捕获）；提交半途抛错即调用 rollback，无 VT/VT 自身抛错则降级为直接切换，`ready`/`finished` 的 reject 一律接住。反馈分层归调用方：按钮先切，事务延后一个任务
 
 ## src-bun/（Bun + Elysia；桌面 sidecar / 服务器部署两形态，靠令牌区分）
@@ -127,15 +127,16 @@ lib/：
 | invoke：`sidecar_token` `reveal_window` `shell_platform` | src-tauri/commands.rs ↔ src-web/lib/tauri（`IPC` 表；`bun run check:ipc` 校验） |
 | 事件：`sidecar-terminated` | src-tauri emit ↔ src-web listen（`IPC_EVENT` 表；同上校验） |
 | env：`TAURI_SIDECAR={"token":...}` | src-tauri/sidecar.rs ↔ src-bun/common/tauri_sidecar.ts |
+| 应用标识与名字 | tauri.conf.json `productName`/`identifier`（AIGC / com.aigc）＝窗口标题、可执行文件名与数据目录（`%APPDATA%\com.aigc`、WebView2 profile）；web 侧另有 `index.html <title>` 与 `brand-logo.tsx` 的 `BRAND_NAME`；改标识=换数据目录，旧数据不迁移 |
 | 令牌语义：非空=sidecar 进程已起来且未退出 | src-tauri/SidecarReady ↔ src-web/lib/backend（请求头）↔ src-bun/controller.plug（校验/门控） |
 | HTTP：`/api/**` `/offline/**` | src-bun 控制器（offline 按令牌 404） ↔ src-web/lib/backend（apiUrl+authHeaders） |
 | 侧栏宽度通道 `--sidebar-width` | src-web/lib/sidebar-channel.ts 单点发布（文档根）→ 侧栏/画布/悬浮侧栏/index.scss 兜底 |
 | 内容面偏移 | src-web/components/layout/page-canvas.tsx 的 `surfaceLeft(mode, desktop)` |
-| 圆角 | 四角半径真值在 src-web `store/ui.ts`（默认 5=RADIUS_DEFAULT，与 index.scss `--app-radius` 兜底同值）→ `lib/radius-channel` 发布通道（最大化归零）→ 壳根/描边/VT 底色层；Win 侧 setup 设 `DWMWCP_DONOTROUND` 关掉系统 8px 裁切，其余平台无分支 |
-| 磨砂旋钮 `--glass-blur`·`--film-a` | src-web `store/ui.ts`（个性化设置）→ `lib/glass-channel.ts` 单点发布到文档根 → index.scss 内容面着色规则；衬层恒实心，与平台无关 |
+| 圆角 | 四角半径真值在 src-web `store/ui.ts`（默认 7=RADIUS_DEFAULT；index.scss `--app-radius` 兜底恒取 0，桌面真值由通道首绘前写入）→ `lib/radius-channel` 只把值写进文档根 `--app-radius`（桌面档且未最大化输出四值，其余输出 0）；形状与裁切是静态规则 `html, body{border-radius:var(--app-radius);overflow:hidden}`（用户实测生效档，两层盒重合：body 无 margin 与 html 同原点同尺寸，故无逐角递减；原点不同的层——壳根/登录页根/页面组件——一律禁止再画圆角）；`[data-app-edge]` 描边与 `::view-transition` 底色层只是按同一变量画线/画底，不额外裁切。Win 侧 setup 设 `DWMWCP_DONOTROUND` 关掉系统 8px 裁切，其余平台无分支 |
+| 个性化旋钮 `--glass-blur`·`--film-a`·`--wash-a` | src-web `store/ui.ts`（个性化设置）→ `lib/glass-channel.ts` 单点发布到文档根 → index.scss 内容面着色规则 + 衬层径向晕染（`--wash-a` 为 0 即整体关掉背景渐变）；衬层壳色恒实心，与平台无关 |
 | 持久化键清单 | src-web/lib/storage.ts `STORAGE_KEYS`（store/theme/分栏布局/检视器位置唯一登记处，新增必须登记且键值不可再改） |
 | 出场时机（启动最小化 → 首屏还原聚焦） | src-tauri/lib.rs setup + `commands::present_window` ↔ src-web/components/layout/window-reveal.tsx |
-| 系统材质（已撤销） | 不用 `windowEffects`/`set_effects`：材质连带 DWM 投影与 1px 框线且关不掉；磨砂一律 src-web CSS（见「磨砂旋钮」契约行） |
+| 系统材质（已撤销） | 不用 `windowEffects`/`set_effects`：材质连带 DWM 投影与 1px 框线且关不掉；磨砂一律 src-web CSS（见「个性化旋钮」契约行） |
 | 移动断点 768 | src-web/hooks/use-mobile.ts ↔ index.scss `--breakpoint-md`/媒体查询（壳最小 375×667 见根 AGENTS） |
 | devUrl / externalBin | scripts/config.ts ↔ src-tauri/tauri.conf.json |
 | 快捷键清单 | src-web/shortcuts/registry.ts（键位/展示/安装唯一来源，新增必须登记） |

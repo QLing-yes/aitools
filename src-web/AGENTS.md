@@ -27,18 +27,18 @@ shadcn ui：
 
 背景系统（独立性铁律）：
 - 主干链零背景：窗口→html/body/#root→壳根→provider→行→标题栏→侧栏→inset→页面根全链路不着色。三层由 index.scss 层外 `!important` 锁死；窗口靠 `transparent:true`。
-- 主题必须同时声明 UA 着色方案：`html{color-scheme:light}` / `html.dark{color-scheme:dark}`。主干透明 ⇒ 壳根圆角、Win11 窗口圆角等「未被自绘覆盖」的像素由 UA 默认画布填充，缺它暗色下顶边整条发白（滚动条/表单控件也恒亮）。
-- 窗口描边归 web：conf 已关 `decorations` 与 `shadow`，OS 不画线也不画阴影 → 壳根末尾 `[data-app-edge]` 用 `--edge` 自绘 1px inset 描边（跟随壳根圆角、`pointer-events:none`、仅桌面渲染）。已知差异：悬浮侧栏 peek 是 body Portal（z-50），展开时压住左缘那 1px。缩放热区为窗口最外约 4 CSS px（`SM_CXFRAME/CYFRAME`），贴边可点控件一律留 ≥8px——现有标题栏/侧栏内缩已满足，纵向滚动条贴右缘属已知风险点。
-- 圆角单源：四角半径是**用户设置**（`store/ui.ts` 的 `corners`，0–`RADIUS_MAX`，0=直角），由 `lib/radius-channel.publishRadius` 合成文档根 `--app-radius`（最大化归零）；壳根、登录页根（`[data-app-radius]`）、窗口描边与 VT 快照底色层全部同源，组件内禁止再写 inline `borderRadius`。禁止另起一条 Rust 圆角链路：Win11 那圈约 8px 系统裁切已由 Rust setup 设 `DWMWCP_DONOTROUND` 关掉，曲线彻底归 CSS。
+- 主题必须同时声明 UA 着色方案：`html{color-scheme:light}` / `html.dark{color-scheme:dark}`。主干透明 ⇒ 整窗圆角、Win11 窗口圆角等「未被自绘覆盖」的像素由 UA 默认画布填充，缺它暗色下顶边整条发白（滚动条/表单控件也恒亮）。
+- 窗口描边归 web：conf 已关 `decorations` 与 `shadow`，OS 不画线也不画阴影 → 壳根末尾 `[data-app-edge]` 用 `--edge` 自绘 1px inset 描边（半径取 `--app-radius` 通道值、`pointer-events:none`、仅桌面渲染）。已知差异：悬浮侧栏 peek 是 body Portal（z-50），展开时压住左缘那 1px。缩放热区为窗口最外约 4 CSS px（`SM_CXFRAME/CYFRAME`），贴边可点控件一律留 ≥8px——现有标题栏/侧栏内缩已满足，纵向滚动条贴右缘属已知风险点。
+- 圆角单源：四角半径是**用户设置**（`store/ui.ts` 的 `corners`，0–`RADIUS_MAX`，0=直角，默认 7），`lib/radius-channel.publishRadius` 只把它合成一组值写进文档根 `--app-radius`（桌面档且未最大化才输出非 0，其余输出 0 = 不圆不裁）；形状与裁切是 index.scss 的一条静态规则 `html, body{border-radius:var(--app-radius);overflow:hidden}`，无属性标记、无 JS 挂标记。两层同值的前提是**盒完全重合**（body 由 preflight 去 margin，与 html 同原点同尺寸）——原点不同的两层（壳根、页面根）一律禁止再画圆角，两层矩形相交会把不到 1px 的框偏差放大成逐角递减的弧，组件内也禁止写 inline `borderRadius`。`[data-app-edge]` 描边与 `::view-transition` 底色层读同一变量只用于画线/画底，不额外裁切。禁止另起一条 Rust 圆角链路：Win11 那圈约 8px 系统裁切已由 Rust setup 设 `DWMWCP_DONOTROUND` 关掉，曲线彻底归 CSS。
 - 主题落地时同步一次原生明暗 `lib/tauri.setWindowTheme(dark)`（仅 Windows，供 DWM 缩略图/Alt-Tab 着色；mac/linux 传明暗会污染 `prefers-color-scheme` 判定）。
 - 背景是页面级资产：每页自带 `<PageCanvas>`（衬层 bg-shell 壳色+噪点晕染、内容面半透壳色 76% + blur12 磨砂、左上内圆角、top-titlebar 让位标题栏带；点状 `.bg-dots` 仅登录页，流程页用 React Flow 自带 Background）。锚点由本模块自持（`CanvasAnchor` 组件 + 模块内槽位 + useSyncExternalStore，不用 context/ref 转发），AppShell 只在壳根摆出锚点节点（absolute inset-0 -z-10 全窗），画布 createPortal 铺满含标题栏带——Portal 是绕开 `contain:paint` 封锁的既定手段，行 contain 不变量勿动。
 - 内容面偏移是 JS 事实：`page-canvas.surfaceLeft(mode, desktop)` 返回 `var(--sidebar-width)`/`var(--sidebar-width-icon)`/`0px` 并直写 style，index.scss 只留过渡与着色；不再挂 `data-sidebar-mode`，也没有 CSS 侧的三态分支。
-- 允许着色层白名单：页面画布两层、悬浮侧栏 peek（chrome 72%+blur18）、卡片/下拉菜单磨砂（--card/--popover 40%+blur24，全局规则挂 data-slot）、登录页自有根与 rf 光晕图、dev-only 检视面板（dev/layer-inspector.ts，release 不挂载）。除此以外禁止任何作用于全应用的背景。
+- 允许着色层白名单：页面画布两层（衬层两处径向晕染受 `--wash-a` 开关缩放，关到 0 即只剩壳色+噪点）、悬浮侧栏 peek（chrome 72%+blur18）、卡片/下拉菜单磨砂（--card/--popover 40%+blur24，全局规则挂 data-slot）、登录页自有根与 rf 光晕图、dev-only 检视面板（dev/layer-inspector.ts，release 不挂载）。除此以外禁止任何作用于全应用的背景。
 - `dev/layer-inspector.ts` 必须零依赖（只用 DOM/CSSOM，不引 React、shadcn、本项目令牌），层级靠运行时 `getComputedStyle` 自动扫描（html、body 恒为最底两层）——新增自带背景的层无需登记；改它要保持「整文件拷进任意项目即可用」。
 - 移动抽屉例外：Sheet 保持 bg-sidebar 实底（透明规则仅限 ≥768px）。
 - 过渡伪层例外：`::view-transition` 兜底色仅存于主题切换 300ms（见"桌面窗口与主题切换"）。
 - 主窗口亚克力只做纯 CSS（各平台一致，不用系统材质——`windowEffects` 评估过已撤销，理由见 EXPERIENCES）：`page-canvas-shell` 实心 `--shell` + 噪点(inline svg feTurbulence) + 两处 `muted-foreground` 径向晕染；内容面 `--shell` 半透 + 自糊。
-  - 两个旋钮单源：`--glass-blur`（内容面自糊半径）、`--film-a`（内容面壳色不透明度 %，默认 76）；真值在 `store/ui.ts` 的个性化设置，由 `lib/glass-channel.publishGlass()` 发布到文档根。组件内禁止再写死 blur/alpha，也不许按平台分支改背景；衬层恒实心。默认档与上限（`*_DEFAULT`/`*_MAX`）连同 `resetPersonalize()` 都在 `store/ui.ts`，设置页滑杆不得再写字面数值。点状纹理不在此层（`.bg-dots` 仅登录页引用）。
+  - 三个旋钮单源：`--glass-blur`（内容面自糊半径）、`--film-a`（内容面壳色不透明度 %，默认 76）、`--wash-a`（衬层背景渐变 1/0，默认 1）；真值在 `store/ui.ts` 的个性化设置，由 `lib/glass-channel.publishGlass()` 发布到文档根。组件内禁止再写死 blur/alpha/晕染浓度，也不许按平台分支改背景；衬层壳色恒实心。默认档与上限（`*_DEFAULT`/`*_MAX`）连同 `resetPersonalize()` 都在 `store/ui.ts`，设置页滑杆不得再写字面数值。点状纹理不在此层（`.bg-dots` 仅登录页引用）。
 - 淡出线单源：横竖各一条 `--line-h`/`--line-v`（1px、两端 4% 全透明、色取 `--separator`），SCSS 与 TSX 一律引用变量，禁止再展开 gradient 字面量；拖拽线恒显不变色。
 - 标题栏带高度单源：`@theme --spacing-titlebar: 2.5rem` → `h-titlebar`/`top-titlebar`（壳根让位、内容面偏移、悬浮侧栏共用），新增让位处用该类，不再写 h-10/top-10/top-12。
 - 断点单源：`--breakpoint-md: 768px`（Tailwind `md:` 的实值）+ SCSS 媒体查询写 768px + `hooks/use-mobile.ts` 的 768，三处同值，改断点必须三处一起动（JS 与 CSS 无法共享变量，靠注释互指）。
@@ -57,7 +57,7 @@ shadcn ui：
 - 宽度单通道：`lib/sidebar-channel.publishWidth` 只写 `<html>`，侧栏/拖拽手柄/画布内容面/悬浮侧栏全部继承它；可拖区间 `WIDTH_MIN`/`WIDTH_MAX` 也在该模块，拖拽钳制与 store 持久化收敛共用同一档。拖拽期间直写文档根，pointerup 才提交 store。禁止在 provider/锚点/组件上再 inline 重复变量。
 - hidden 态另挂左缘悬浮侧栏（sidebar-peek.tsx，官方非模态 Sheet + 复用 sidebar-body.tsx，`tooltip={false}` 抑制全宽态的重复提示），几何、磨砂与 1px `--edge` 极浅描边在 index.scss 契约条目 5/6，组件侧不再写 border 类。
 - ui/sidebar.tsx 的 CLI 手改例外共三处：删 cookie 写入、删内置 Ctrl+B、去掉 wrapper 的 inline `--sidebar-width(-icon)`；CLI 更新后会带回，需按 STRUCTURE.md 的 ui/ 例外行复原。
-- 行容器的 `[contain:paint]` 是 fixed 侧栏的包含块（侧栏始于标题栏之下、被壳圆角裁剪），不可移除；勿换成 transform（DPI 缩放下文字发虚）。
+- 行容器的 `[contain:paint]` 是 fixed 侧栏的包含块（侧栏始于标题栏之下、被整窗圆角裁剪），不可移除；勿换成 transform（DPI 缩放下文字发虚）。
 
 目录规范：按职责独立成目录，互不越界。
 - `components/ui/`：shadcn CLI 生成的组件（勿手改，走 CLI 更新；已知例外见 STRUCTURE.md 的 ui/ 行）。
@@ -66,7 +66,7 @@ shadcn ui：
 - `routes/`：路由表 `router.tsx` + 页面 `pages/`。
 - `store/`：zustand 持久化状态（ui/auth）。
 - `hooks/`：通用 React hooks。
-- `lib/`：`tauri/`（IPC 命令与事件常量表 + 窗口能力）、`backend.ts`（后端形态/地址/鉴权头单源）、`api.ts`·`chat.ts`（消费 backend）、`sidebar-channel.ts`（宽度通道）、`glass-channel.ts`（磨砂旋钮通道）、`radius-channel.ts`（四角圆角通道）、`storage.ts`（持久化键登记 + 容错读写单源）、`theme-transition.ts`。网络请求与令牌注入、localStorage 键名禁止在页面里各写一份。
+- `lib/`：`tauri/`（IPC 命令与事件常量表 + 窗口能力）、`backend.ts`（后端形态/地址/鉴权头单源）、`api.ts`·`chat.ts`（消费 backend）、`sidebar-channel.ts`（宽度通道）、`glass-channel.ts`（个性化旋钮通道：磨砂两项 + 背景渐变）、`radius-channel.ts`（四角圆角通道）、`storage.ts`（持久化键登记 + 容错读写单源）、`theme-transition.ts`。网络请求与令牌注入、localStorage 键名禁止在页面里各写一份。
 - `shortcuts/`：`registry.ts` 是快捷键唯一来源（combo 结构 + 类别 + 生效端；`comboText/entryText` 派生展示、`comboMatches` 供匹配），`webview.ts` 按清单安装 block/hotkey，`sidebar-hotkey.ts` 只挂三态循环。新增热键/拦截必须进清单，否则设置页漏项。主题切换无热键，仅菜单触发。
 - `styles/`：额外全局样式（typeset.scss）。
 架构边界（eslint 强制）：Tauri IPC 仅在 `lib/tauri/`；Eden 仅在 `lib/api.ts`；fetch 仅在 `lib/chat.ts`（AI SDK transport 注入鉴权头）；其余代码禁止裸 `fetch`。
